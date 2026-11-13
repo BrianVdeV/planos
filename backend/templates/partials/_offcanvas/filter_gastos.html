@@ -1,0 +1,55 @@
+<div
+  class="offcanvas offcanvas-end"
+  tabindex="-1"
+  id="offcanvasRight"
+  aria-labelledby="offcanvasRightLabel"
+>
+  <div class="offcanvas-body">
+    <div class="mb-3">
+      <label for="usuario" class="form-label">Usuario</label>
+      <select class="form-select" id="usuario">
+        <option value="">Todos</option>
+        {% for usuario in usuarios %}
+        <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="ots" class="form-label">OTS</label>
+      <select class="form-select" id="ots">
+        <option value="">Todos</option>
+        {% for ot in ots %}
+        <option value="{{ ot.id }}">{{ ot }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="simpleinput" class="form-label">Categoria</label>
+      <select class="form-select" id="categoria">
+        <option value="">Todos</option>
+        <option value="Firma">Firma</option>
+        <option value="Movilidad">Movilidad</option>
+        <option value="Municipalidad">Municipalidad</option>
+        <option value="Notaria">Notaria</option>
+        <option value="Oficina">Oficina</option>
+        <option value="Otros">Otros</option>
+        <option value="Sunarp">Sunarp</option>
+        <option value="Taxi">Taxi</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+      <input type="date" class="form-control" id="fecha_inicio" />
+    </div>
+    <div class="mb-3">
+      <label for="fecha_fin" class="form-label">Fecha Fin</label>
+      <input type="date" class="form-control" id="fecha_fin" />
+    </div>
+    <button id="btnAplicarFiltro" class="btn btn-primary">
+      Aplicar filtros
+    </button>
+    <button id="btnLimpiarFiltro" class="btn btn-outline-secondary">
+      Limpiar filtros
+    </button>
+  </div>
+</div>

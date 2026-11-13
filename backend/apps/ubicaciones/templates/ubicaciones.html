@@ -1,0 +1,164 @@
+{% extends 'base.html' %} {% block title %}Ubicaciones{% endblock title %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Mapa</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row mb-2">
+          <div class="col-sm-5">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mdlUbicacion" id="btnUbicacion">Añadir ubicación</button>
+          </div>
+        </div>
+        <table class="table table-sm dt-responsive w-100" id="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>OT</th>
+              <th>Provincia</th>
+              <th>Distrito</th>
+              <th>Direccion</th>
+              <th>Coordenadas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/_modals/modal_add_ubicacion.html" %}
+{% endblock %}
+{% block page_js %}
+<script>
+  $(document).ready(function() {
+    $("#ot").select2({
+      dropdownParent: $("#mdlUbicacion"),
+    });
+
+    var table = $("#table").DataTable({
+      language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+      pageLength: 50,
+      rowId: "id",
+      serverSide: true,
+      processing: true,
+      order: [[0, "desc"]],
+      ajax: {
+        url: "{% url 'ubicacion-list' %}?format=datatables",
+        type: "GET",
+      },
+      columns: [
+        { 
+            data: "id",
+        }, 
+        { 
+            data: "ot_str",
+            name: "ot__id, ot__nombre",
+        }, 
+        { 
+            data: "provincia",
+            name: "ubigeo__provincia",
+        },
+        { 
+            data: "distrito",
+            name: "ubigeo__distrito",
+        },
+        { 
+            data: "direccion",
+        },
+        { 
+            data: "coordenadas",
+        },
+        { 
+            data: null, 
+            orderable: false, 
+            searchable: false,
+            defaultContent: `
+            <div class="dropdown card-widgets">
+                <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="javascript:void(0);" class="dropdown-item text-danger delete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>
+                </div>
+            </div>`
+        },
+        ]
+    })
+  });
+  
+  function loadDepartamento() {
+    $.get("{% url 'ubigeo-list' %}departamentos/", function (data) {
+      var departamentos = data;
+      $("#departamento").html("<option>Seleccione departamento</option>");
+      departamentos.forEach(function (departamento) {
+        $("#departamento").append(new Option(departamento, departamento));
+      });
+    });
+  }
+
+  // Función para cargar las provincias según el departamento
+  function loadProvincia(departamento) {
+    $.get("{% url 'ubigeo-list' %}provincias/?departamento=" + departamento, function (data) {
+      var provincias = data;
+      $("#provincia").html("<option>Seleccione provincia</option>");
+      provincias.forEach(function (provincia) {
+        $("#provincia").append(new Option(provincia, provincia));
+      });
+    });
+  }
+
+  // Función para cargar los distritos según la provincia
+  function loadDistrito(provincia) {
+    $.get("{% url 'ubigeo-list' %}?provincia=" + provincia, function (data) {
+      var ubigeos = data.results;
+      $("#distrito").html("<option>Seleccione distrito</option>");
+      ubigeos.forEach(function (ubigeo) {
+        $("#distrito").append(new Option(ubigeo.distrito,ubigeo.id));
+      });
+    });
+  }
+
+  loadDepartamento();
+
+  // Evento para cargar provincias cuando cambia el departamento
+  $("#departamento").on("change", function () {
+    var departamentoSeleccionado = $(this).val();
+    if (departamentoSeleccionado) {
+      loadProvincia(departamentoSeleccionado);
+    }
+  });
+
+  $("#provincia").on("change", function () {
+    var provinciaSeleccionado = $(this).val();
+    if (provinciaSeleccionado) {
+      loadDistrito(provinciaSeleccionado);
+    }
+  });
+
+  $(document).on("click", ".delete", function (e) {
+    e.preventDefault();
+    const id = $(this).closest("tr").attr("id");
+    if (confirm("¿Confirma que desea eliminar este expediente?")){
+      $.ajax({
+        url: `../api/ubicacion/${id}/`, 
+        method: "DELETE",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+        success: function (response) {
+          $("#table").DataTable().ajax.reload();
+          $.NotificationApp.send("¡Bien hecho!", "Expediente eliminado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        },
+        error: function (xhr) {
+          $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+        },
+      });
+    }
+  });
+</script>
+{% endblock %}

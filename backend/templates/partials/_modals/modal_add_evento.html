@@ -1,0 +1,71 @@
+<div class="modal fade" id="mdl" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Crear Eventos</h4>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      {% csrf_token %}
+      <div class="modal-body">
+        <form id="form-evento">
+          <div class="row mb-3">
+            <div class="col">
+              <label>Título</label>
+              {{form.titulo}}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label>Fecha</label>
+              {{form.fecha}}
+            </div>
+            <div class="col-md-4">
+              <label>Inicio</label>
+              {{form.inicio}}
+            </div>
+            <div class="col-md-4">
+              <label>Fin</label>
+              {{form.fin}}
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label>OTS</label>
+              {{form.ot}}
+            </div>
+            <div class="col-md-6">
+              <label>Participantes</label>
+              {{form.participantes}}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label>Descripción</label>
+            <textarea id="descripcion" class="form-control" rows="2"></textarea>
+          </div>
+
+          <hr />
+          <h5>Recordatorios</h5>
+          <div id="recordatorios-container">
+            <!-- Aquí se agregarán los recordatorios dinámicamente -->
+          </div>
+          <button
+            type="button"
+            id="btn-add-recordatorio"
+            class="btn btn-sm btn-secondary mb-3"
+          >
+            + Añadir Recordatorio
+          </button>
+          <hr />
+          <button type="submit" class="btn btn-primary">Guardar Evento</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

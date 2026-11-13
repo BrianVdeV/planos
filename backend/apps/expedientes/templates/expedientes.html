@@ -1,0 +1,261 @@
+{% extends 'base.html' %} {% load static %} 
+{% block title %}Sunarp{% endblock %} 
+
+{% block vendor_js %}
+<script src="https://cdn.datatables.net/plug-ins/2.2.2/dataRender/datetime.js"></script>
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+{% endblock vendor_js %} 
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="page-title">Sunarp</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            {% if user.is_superuser %}
+            <a data-bs-target="#mdlAddExp" data-bs-toggle="modal" class="btn btn-primary mb-2">
+              <i class="mdi mdi-plus"></i> Crear expediente
+            </a>
+            {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <div class="text-sm-end">
+              <button id="btnExport" class="btn btn-success mb-2" type="button">
+                <i class="mdi mdi-file-excel"></i> Exportar
+              </button>
+              <button id="btnFiltro" class="btn btn-outline-primary mb-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                <i class="mdi mdi-filter-variant"></i> Filtros
+                <span id="badgeFiltros" class="badge bg-light text-dark ms-1 d-none">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <table id="table" class="table table-sm dt-responsive w-100">
+          <thead>
+          <tr>
+            <th>OT</th>
+            <th>Inicio de OT</th> 
+            <th>Presentante</th>
+            <th>Presentación</th>
+            <th>Titulo</th>
+            <th>Estado</th>
+            <th>Reingreso</th>
+            <th>Vencimiento</th>
+            <th></th>
+          </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'partials/_modals/modal_add_expediente.html' %}
+{% include 'partials/_modals/modal_edit_expediente.html' %}
+{% include 'partials/_offcanvas/filter_sunarp.html' %}
+
+{% endblock %} 
+
+{% block page_js %}
+<script src="{% static 'js/pages/expedientes.js' %}"></script>
+<script>
+  $(document).ready(function () {
+    
+    var table = $("#table").DataTable({
+      language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+      pageLength: 50,
+      rowId: "id",
+      serverSide: true,
+      processing: true,
+      order: [[7, 'desc']], 
+      ajax: {
+        url: "{% url 'sunarp-list' %}?format=datatables",
+        type: "GET",
+        data: function(d) {
+          d.estado = document.getElementById('estado_filter')?.value || '';
+          d.ot__estado = document.getElementById('ot_estado_filter')?.value || '';
+        }
+      },
+
+      columns: [
+        { 
+            data: "ot_link", 
+            name: "ot__id, ot__nombre",
+        }, 
+        { 
+            data: "fecha_inicio_ot",
+            name: "ot__inicio",
+            searchable: false
+        },
+        { 
+            data: "presentante",
+        },
+        { 
+            data: "presentacion",
+            render: function(data) { return data ? moment(data).format('DD/MM/YY') : '-'; }
+        },
+        { 
+            data: "expediente_str",
+            name: "numero",
+        },
+        { 
+            data: "estado_badge",
+            name: "estado"
+        },
+        { 
+            data: "reingreso",
+            render: function(data) { return data ? moment(data).format('DD/MM/YY') : '-'; }
+        },
+        { 
+            data: "vencimiento",
+            render: function(data) { return data ? moment(data).format('DD/MM/YY') : '-'; }
+        },
+        { 
+            data: null, 
+            orderable: false, 
+            searchable: false,
+            defaultContent: `
+            <div class="dropdown card-widgets">
+                <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="javascript:void(0);" class="dropdown-item edit"><i class="uil uil-edit me-1"></i>Editar</a>
+                    <a href="javascript:void(0);" class="dropdown-item text-danger delete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>
+                </div>
+            </div>`
+        },
+      ],
+      createdRow: function (row, data, dataIndex) {
+        var hoy = moment().startOf('day');
+        
+        var alerta7dias = moment().startOf('day').add(7, 'days');
+
+        var fechaLimite = data.vencimiento ? moment(data.vencimiento) : null;
+
+        var rawEstado = (data.estado || data.estado_badge || "").toString();
+        var estadoLimpio = rawEstado.toUpperCase().replace(/<[^>]*>?/gm, '').trim();
+
+        if (!estadoLimpio.includes("INSCRITO") && !estadoLimpio.includes("TACHADO")) {
+            
+            if (fechaLimite) {
+                if (fechaLimite.isBefore(hoy)) {
+                    $(row).addClass('text-danger');
+                } 
+                else if (fechaLimite.isSameOrBefore(alerta7dias)) {
+                    $('td', row).eq(7).addClass('text-danger fw-bold');
+                }
+            }
+        }
+      },
+    });
+
+    function actualizarBadgeFiltros() {
+      let filtrosActivos = 0;
+      if ($("#estado_filter").val() !== "") filtrosActivos++;
+      if ($("#ot_estado_filter").val() !== "") filtrosActivos++;    
+      const badge = document.getElementById("badgeFiltros");
+      const boton = document.getElementById("btnFiltro");
+      if (filtrosActivos > 0) {
+        badge.textContent = filtrosActivos;
+        badge.classList.remove("d-none");
+        boton.classList.remove("btn-outline-primary");
+        boton.classList.add("btn-primary");
+      } else {
+        badge.classList.add("d-none");
+        boton.classList.remove("btn-primary");
+        boton.classList.add("btn-outline-primary");
+      }
+    }
+    
+    actualizarBadgeFiltros();
+
+    $('#btnAplicarFiltro').on('click', function() {
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnLimpiarFiltro').on('click', function () {
+      $('#estado_filter').val('');
+      $('#ot_estado_filter').val('');
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnExport').on('click', function() {
+      var params = table.ajax.params();
+      var queryString = $.param(params);
+      var urlExcel = "{% url 'sunarp-list' %}?format=xlsx&" + queryString;
+      window.open(urlExcel, '_blank');
+    });
+  });
+
+  // (Scripts de Add/Edit/Delete siguen igual...)
+  $(document).on("submit", "#frmAdd", function (e) {
+    e.preventDefault();
+    $.ajax({
+      url: `../api/expedientes/`,
+      method: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: $(this).serialize(),
+      success: function (res) {
+        $("#mdlAddExp").modal("hide");
+        $("#table").DataTable().ajax.reload(null, false);
+        $.NotificationApp.send("¡Bien hecho!", "Expediente creado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr) {
+        $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+      },
+    });
+  });
+
+  $(document).on("submit", "#frmEdit", function (e) {
+    e.preventDefault();
+    const expedienteId = $(this).attr("data-id");
+    $.ajax({
+      url: `../api/expedientes/${expedienteId}/`,
+      method: "PATCH",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: $(this).serialize(),
+      success: function (res) {
+        $("#mdlEdit").modal("hide");
+        $("#table").DataTable().ajax.reload(null, false);
+        $.NotificationApp.send("¡Bien hecho!", "Expediente actualizado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr) {
+        $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+      },
+    });
+  });
+
+  $(document).on("click", ".delete", function (e) {
+    e.preventDefault();
+    const id = $(this).closest("tr").attr("id");
+    if (confirm("¿Confirma que desea eliminar este expediente?")){
+      $.ajax({
+        url: `../api/expedientes/${id}/`, 
+        method: "DELETE",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+        success: function (response) {
+          $("#table").DataTable().ajax.reload();
+          $.NotificationApp.send("¡Bien hecho!", "Expediente eliminado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        },
+        error: function (xhr) {
+          $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+        },
+      });
+    }
+  });
+</script>
+{% endblock %}

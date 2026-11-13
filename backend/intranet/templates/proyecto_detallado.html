@@ -1,0 +1,686 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ot}}{% endblock title %}
+
+{% block vendor_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link href="{% static 'vendor/quill/quill.core.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'vendor/quill/quill.snow.css' %}" rel="stylesheet" type="text/css" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{% static 'vendor/quill/quill.min.js' %}"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <form class="d-flex">
+                    <a href="{% url 'proyectos' %}" class="btn btn-success ms-1">
+                        <i class="mdi mdi-arrow-left me-1"></i> Salir
+                    </a>
+
+                    <button class="btn btn-primary ms-1" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="mdi mdi-dots-vertical"></i>
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            {% if ot.estado != "Activo" %}
+                            <a class="dropdown-item" href="javascript: void(0);" onclick="desarchivarProyecto()">
+                                <i class="mdi mdi-archive-arrow-up me-1"></i>Desarchivar Proyecto
+                            </a>
+                            {% else %}
+                            <a class="dropdown-item" href="javascript: void(0);" data-bs-toggle="modal" data-bs-target="#mdlArchivar">
+                                <i class="mdi mdi-archive-arrow-down me-1"></i>Archivar Proyecto
+                            </a>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="javascript: void(0);" data-bs-toggle="modal" data-bs-target="#mdlDelete">Eliminar</a>
+                        </div>
+                </form>
+            </div>
+            <h4 class="page-title">{{ot}}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-body">
+      <ul class="nav nav-tabs nav-bordered mb-3">
+        <li class="nav-item">
+            <a href="#configuracion" data-bs-toggle="tab" aria-expanded="true" class="nav-link active">
+                <i class="mdi mdi-account-circle d-md-none d-block"></i>
+                <span class="d-none d-md-block">Apertura</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#estado" data-bs-toggle="tab" aria-expanded="false" class="nav-link">
+                <i class="mdi mdi-home-variant d-md-none d-block"></i>
+                <span class="d-none d-md-block">Tareas</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#expedientes" data-bs-toggle="tab" aria-expanded="false" class="nav-link">
+                <i class="mdi mdi-file-sign d-md-none d-block"></i>
+                <span class="d-none d-md-block">Expedientes</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#finanzas" data-bs-toggle="tab" aria-expanded="false" class="nav-link">
+                <i class="mdi mdi-bitcoin d-md-none d-block"></i>
+                <span class="d-none d-md-block">Finanzas</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#tiempo" data-bs-toggle="tab" aria-expanded="false" class="nav-link">
+                <i class="mdi mdi-clock d-md-none d-block"></i>
+                <span class="d-none d-md-block">Tiempo empleado</span>
+            </a>
+        </li>
+      </ul>
+      
+      <div class="tab-content">
+        
+        <div class="tab-pane show active" id="configuracion">
+          <div class="row">
+            <div class="chart-content-bg">
+                <div class="row text-center">
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-0 mt-3">Presupuesto Gastado</p>
+                        <h2 class="fw-normal mb-3">
+                            <small class="mdi mdi-checkbox-blank-circle text-primary align-middle me-1"></small>
+                            <span>{{total_gastos}} PEN</span>
+                        </h2>
+                    </div>
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-0 mt-3">Ingresos</p>
+                        <h2 class="fw-normal mb-3">
+                            <small class="mdi mdi-checkbox-blank-circle text-success align-middle me-1"></small>
+                            <span>- PEN</span>
+                        </h2>
+                    </div>
+                    <div class="col-sm-4">
+                        <p class="text-muted mb-0 mt-3">Tiempo registrado</p>
+                        <h2 class="fw-normal mb-3">
+                            <small class="mdi mdi-checkbox-blank-circle text-danger align-middle me-1"></small>
+                            <span>{{total_horas_registradas}} horas</span>
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-12">
+              {% if ot.estado == "Finalizado" %}
+                <div class="alert alert-success" role="alert">
+                  <strong>El proyecto se ha cerrado con éxito.</strong>{{ot.fecha_archivo|date:" d/m/Y" }}
+                  <br>
+                  <em>{{ot.descripcion_archivo}}</em>
+                </div>
+              {% elif ot.estado == "Suspendido" %}
+                <div class="alert alert-warning" role="alert">
+                  <strong>El proyecto está en suspenso.</strong>{{ot.fecha_archivo|date:" d/m/Y" }}
+                  <br>
+                  <em>{{ot.descripcion_archivo}}</em>
+                </div>
+              {% endif %}
+              <form method="post" id="form-edit-proyecto">
+                <div class="mb-3">
+                  <label for="txtNombre" class="form-label">Nombre</label>
+                  <input type="text" id="txtNombre" name="nombre" class="form-control" value="{{ot.nombre}}">
+                </div>
+                <div class="mb-3">
+                  <label for="txtColor" class="form-label">Color</label>
+                  <input class="form-control" id="txtColor" type="color" name="color" value="{{ot.color}}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Etiquetas</label>
+                    <div>
+                        {% for etiqueta in etiquetas %}
+                            <span class="badge badge-{{ etiqueta.color }}-lighten">{{ etiqueta.nombre }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <input type="hidden" name="descripcion" id="hiddenDescripcion">
+                    <div id="toolbar-container">
+                      <span class="ql-formats">
+                          <select class="ql-font"></select>
+                          <select class="ql-size"></select>
+                      </span>
+                      <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                            <button class="ql-strike"></button>
+                            <button id="custom-uppercase" type="button" title="Mayúsculas" style="width: auto; padding: 0 4px;">
+                                <b style="font-size: 13px;">MAY</b>
+                            </button>
+                            <button id="custom-lowercase" type="button" title="Minúsculas" style="width: auto; padding: 0 4px;">
+                                <b style="font-size: 13px;">min</b>
+                            </button>
+                        </span>
+                      <span class="ql-formats">
+                          <select class="ql-color"></select>
+                          <select class="ql-background"></select>
+                      </span>
+
+                      <span class="ql-formats">
+                          <button class="ql-list" value="ordered"></button>
+                          <button class="ql-list" value="bullet"></button>
+                      </span>
+
+                      <span class="ql-formats">
+                          <button class="ql-link"></button>
+                          <button class="ql-clean"></button>
+                      </span>
+                      <span class="ql-formats">
+                        <button type="submit" form="form-edit-proyecto" class="btn btn-primary btn-sm" style="width: auto; height: auto; padding: 2px 8px; color: rgb(26, 9, 255);">
+                            Guardar
+                        </button>
+                    </span>
+                  </div>
+                    <div id="snow-editor" style="height: 300px;">
+                        {{ ot.descripcion|safe|default_if_none:"" }}
+                    </div>
+                    
+                </div>
+                <div class="mb-4">
+                  <div class="form-check form-check-inline">
+                      <input type="radio" id="chkPrivado1" name="chkPrivado" value="1" class="form-check-input" {% if ot.privado == 1 %}checked{% endif %}>
+                      <label class="form-check-label" for="chkPrivado1">Privado</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                      <input type="radio" id="chkPrivado2" name="chkPrivado" value="0" class="form-check-input" {% if ot.privado == 0 %}checked{% endif %}>
+                      <label class="form-check-label" for="chkPrivado2">Público</label>
+                  </div>
+                </div>
+                <button class="btn btn-success" type="submit">Guardar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <div class="tab-pane" id="estado">
+          <div class="row">
+            <div class="col">
+              {% if nombre_area != "Administración" %}
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#add">Agregar nueva tarea</button>
+              {% endif %}
+            </div>
+          </div>
+          <br>
+          <div class="row">
+          <div class="col">
+            <table id="table" class="table dt-responsive nowrap w-100">
+              <thead>
+                  <tr>
+                      <th>Estado</th>
+                      <th>Titulo</th>
+                      <th>Responsables</th>
+                      <th>Vencimiento</th>
+                      <th>Tiempo Registrado</th>
+                      <th></th>
+                  </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+          </div>
+        </div>
+            <div class="tab-pane" id="expedientes">
+                <div class="row">
+									<h4>Expedientes del Proyecto</h4>
+                  <br>
+									{% for exp in expedientes_list %}
+                		<div class="col-lg-6">
+                      <div class="card ">
+                          <div class="card-body">
+                              <h5 class="text-muted fw-normal mt-0 expediente-estado" title="Estado del Expediente" data-estado="{{ exp.estado }}">
+                                  {{ exp.estado }}
+                              </h5>
+                              <h3 class="mt-3 mb-3">{{ exp }}</h3>
+                              <p class="mb-0 text-muted">
+                                  <span class="text-nowrap">
+                                      <i class="mdi mdi-office-building"></i> Oficina: 
+                                      <b>{{ exp.oficina }}</b>
+                                  </span>
+                                  <br>
+                                  <span class="text-nowrap">
+                                      <i class="mdi mdi-account"></i> Presentante: 
+                                      <b>{{ exp.presentante }}</b>
+                                  </span>
+                                  <br>
+                                  <span class="text-nowrap">
+                                      <i class="mdi mdi-calendar-import"></i> Ingreso: 
+                                      <b>{{ exp.presentacion|date:"d/m/Y" }}</b>
+                                  </span>
+                                  <br>
+                                  <span class="text-warning">
+                                      <i class="mdi mdi-calendar-alert"></i> Max. Reingreso: 
+                                      <b>{{ exp.reingreso|date:"d/m/Y" }}</b>
+                                  </span>
+                                  <br>
+                                  <span class="text-danger">
+                                      <i class="mdi mdi-calendar-alert"></i> Vence: 
+                                      <b>{{ exp.vencimiento|date:"d/m/Y" }}</b>
+                                  </span>
+                              </p>
+                          </div> 
+                      </div> 
+											</div>
+                      {% empty %}
+                      <div class="card">
+                          <div class="card-body">
+                              <p class="text-muted text-center mb-0">No hay expedientes.</p>
+                          </div>
+                      </div>
+                      {% endfor %}
+                </div>
+            </div>
+          <div class="tab-pane" id="tiempo">
+            <table id="tableTiempo" class="table dt-responsive nowrap w-100">
+              <thead>
+                  <tr>
+                      <th>Tarea</th>
+                      <th>Usuario</th>
+                      <th>Inicio</th>
+                  </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="mdlDelete" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="standard-modalLabel">Eliminar</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <form id="frmDeleteTarea" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>¿Estás seguro de que quieres eliminar la Tarea? </p>
+                    <input type="hidden" id="id_tarea_eliminar" name="id" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger" type="submit">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="add" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="standard-modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="standard-modalLabel">Nueva Tarea</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+      </div>
+      <form method="post" id="frmAdd">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="titulo" class="form-label">Título</label>
+            {{form.titulo}}
+          </div>
+          <div class="mb-3">
+            <label for="addDescripcion" class="form-label">Descripción</label>
+            {{form.descripcion}}
+          </div>
+          <div class="row">
+            <div class="col-sm-6 mb-3">
+              <label for="user" class="form-label">Responsable</label>
+              {{form.user}}
+            </div>
+            <div class="col-sm-3 mb-3">
+              <label for="vencimiento" class="form-label">Vencimiento</label>
+              {{form.vencimiento}}
+            </div>
+            <div class="col-sm-3 mb-3">
+              <label for="duracion" class="form-label">Tiempo estimado</label>
+              {{form.duracion}}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div></div></div>
+
+<div class="modal fade" id="mdlArchivar" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Cambiar el estado del proyecto</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <form id="frmArchivarProyecto" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="estado" id="inputEstadoArchivo" value="Finalizado">
+                    
+                    <div class="btn-group mb-3 w-100" role="group" aria-label="Estado del Proyecto">
+                        <button type="button" class="btn btn-success w-50 active-state" id="btnFinalizado" onclick="selectEstado('Finalizado')">
+                            <i class="mdi mdi-check"></i> Finalizado con éxito
+                        </button>
+                        <button type="button" class="btn btn-light w-50" id="btnSuspendido" onclick="selectEstado('Suspendido')">
+                            <i class="mdi mdi-clock-outline"></i> Suspendido
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de archivo del proyecto</label>
+                        <input type="date" class="form-control flatpickr-input" name="fecha_archivo" value="{% now 'Y-m-d' %}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notas / Motivo</label>
+                        <textarea class="form-control" name="descripcion_archivo" rows="4"></textarea>
+                    </div>
+                    <!-- Opciones adicionales 
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="check_archivar_tareas" id="checkArchivar" checked>
+                        <label class="form-check-label" for="checkArchivar">
+                            Archivar todas las tareas pendientes
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="check_ingresos" id="checkIngresos">
+                        <label class="form-check-label" for="checkIngresos">
+                            Marcar los ingresos estimados como recibidos <i class="mdi mdi-help-circle-outline text-muted" title="Esto actualizará las finanzas"></i>
+                        </label>
+                    </div>
+                    -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include 'partials/_offcanvas/kanban_edit.html' %}
+{% endblock %}
+
+
+{% block page_js %}
+<script src="{% static "js/pages/proyectos.js" %}"></script>
+<script>
+  var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+  let currentTaskId = null;
+
+  const estadoMap = {
+    todo: { text: "Por Hacer", color: "secondary" },
+    in_progress: { text: "En Progreso", color: "primary" },
+    review: { text: "En Revisión", color: "warning" },
+    done: { text: "Hecho", color: "success" },
+  };
+
+
+  $(document).on("submit", "#frmAdd", function (e) {
+    e.preventDefault();
+    $.ajax({
+        url: '{% url 'tarea-list' %}',
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+        data: $(this).serialize() + '&ot={{ot.id}}', 
+        success: function (res) {
+            $("#table").DataTable().ajax.reload(null, false); 
+            $("#add").modal("hide");
+            $("#frmAdd")[0].reset();
+            $.NotificationApp.send("¡Creado!", "Tarea creada con éxito", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        },
+        error: function (xhr) {
+            $.NotificationApp.send("¡Error!", "No se pudo crear la tarea", "bottom-right", "rgba(0,0,0,0.2)", "danger");
+        },
+    });
+  });
+
+  $(document).on("submit","#form-edit-proyecto",function(e){
+    e.preventDefault();
+    var form = $(this);
+    var htmlContent = document.querySelector('#snow-editor .ql-editor').innerHTML;
+    $('#hiddenDescripcion').val(htmlContent);
+    $.ajax({
+        url: '{% url 'ots-list' %}{{ot.id}}/',
+        method: "PATCH",
+        headers: { "X-CSRFToken": csrfToken },
+        data: form.serialize(),
+        success: function (res) {
+            $.NotificationApp.send("¡Guardado!", "Proyecto actualizado con éxito", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        },
+        error: function (xhr) {
+            $.NotificationApp.send("¡Error!", "No se pudo actualizar el proyecto", "bottom-right", "rgba(0,0,0,0.2)", "danger");
+        },
+    });
+  })
+
+  $(document).ready(function () {
+    // Inicialización de DataTables
+    var table = $('#table').DataTable({
+        language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+        processing: true,
+        pageLength: 50,
+        order: [],
+        rowId: 'id',
+        ajax: {
+            url: '{% url "tarea-list" %}?ot={{ot.id}}',
+            dataSrc: 'results'
+        },
+        columns: [
+            {
+                data: "estado",
+                render: function (data, type, row) {
+                    const estado = estadoMap[data] || estadoMap["todo"];
+                    return `
+                        <div class="dropdown">
+                            <button class="badge bg-${estado.color} border border-light border-opacity-10 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                ${estado.text}
+                            </button>
+                            <div class="dropdown-menu" id="drpEdit">
+                                <a class="dropdown-item" href="javascript:void(0);" data-estado="todo"><span class="badge bg-secondary">Por Hacer</span></a>
+                                <a class="dropdown-item" href="javascript:void(0);" data-estado="in_progress"><span class="badge bg-primary">En proceso</span></a>
+                                <a class="dropdown-item" href="javascript:void(0);" data-estado="review"><span class="badge bg-warning">En revisión</span></a>
+                                <a class="dropdown-item" href="javascript:void(0);" data-estado="done"><span class="badge bg-success">Hecho</span></a>
+                            </div>
+                        </div>
+                    `;
+                },
+            },
+            { data: 'titulo',
+                render: function (data, type, row) {
+                    return `<a class="text-body" data-bs-toggle="offcanvas" href="#offcanvas" role="button" aria-controls="offcanvas">${data}</a>`;
+                },
+            },
+            { data: "responsables_info",
+                render: function(data, type, row) {
+                // data es el array de objetos usuarios
+                let html = '';
+                data.forEach(user => {
+                    let img = user.foto ? `<img src="${user.foto}" class="avatar-xs rounded-circle">` : '';
+                    html += `<div title="${user.username}">${img} ${user.username}</div>`;
+                });
+                return html;
+            } },
+            { 
+                data: 'vencimiento',
+                render: function (data, type, row) {
+                    return data ? moment(data).format("DD/MM/YY") : "";
+                },
+            },
+            { data: 'horas_trabajadas' },
+            { data: null },
+        ],
+        columnDefs: [
+            {
+                targets: -1,
+                data: null,
+                orderable: false,
+                searchable: false,
+                defaultContent:
+                    '<div class="dropdown card-widgets">' +
+                    '<a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a>' +
+                    '<div class="dropdown-menu dropdown-menu-end">' +
+                    '<a href="javascript:void(0);" class="dropdown-item text-danger btn-delete-tarea" data-bs-toggle="modal" data-bs-target="#mdlDelete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>' +
+                    "</div>" +
+                    "</div>",
+            },
+        ],
+        drawCallback: function () {
+            $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
+        },
+    });
+
+    $('#tableTiempo').DataTable({
+      processing: true,
+      ordering: false,
+      ajax: {
+          url: '{% url "actividades-list" %}?ot={{ot.id}}',
+          dataSrc: 'results'
+      },
+      columns: [
+        { data: 'tarea_nombre',
+          render: function(data, type, row) {
+              return row.tarea_nombre + (row.comentario ? ` <small class="text-muted">${row.comentario}</small>` : '');
+          }
+        },
+        { data: 'user_nombre'},
+        { 
+        data: 'inicio',
+          render: function(data) {
+              return data ? moment(data).format('DD/MM/YYYY HH:mm') : '';
+          }
+        },
+      ],
+    });
+  });
+
+  $(document).ready(function() {
+      
+      var form = document.querySelector('#form-edit-proyecto');
+      var hiddenInput = document.querySelector('#hiddenDescripcion');
+      if (form) {
+          if (typeof colorMapping !== 'undefined') {
+              $('.expediente-estado').each(function() {
+                  var estado = $(this).data('estado');
+                  var color = colorMapping[estado] || 'black';
+                  $(this).css('color', color).removeClass('text-muted');
+              });
+          } else {
+              console.warn("colorMapping no está definido.");
+          }
+      }
+  });
+
+  var quill = new Quill('#snow-editor', {
+    theme: 'snow',
+    modules: {
+      toolbar: '#toolbar-container'
+    }
+  });
+  
+  document.getElementById('custom-uppercase').addEventListener('click', function() {
+      var range = quill.getSelection();
+      if (range && range.length > 0) {
+          var currentText = quill.getText(range.index, range.length);
+          var upperText = currentText.toUpperCase();
+          quill.deleteText(range.index, range.length);
+          quill.insertText(range.index, upperText);
+          quill.setSelection(range.index, range.length);
+      }
+  });
+
+  document.getElementById('custom-lowercase').addEventListener('click', function() {
+    var range = quill.getSelection();
+    if (range && range.length > 0) {
+        var currentText = quill.getText(range.index, range.length);
+        var lowerText = currentText.toLowerCase(); 
+        quill.deleteText(range.index, range.length);
+        quill.insertText(range.index, lowerText);
+        quill.setSelection(range.index, range.length);
+    }
+  });
+
+  // --- LÓGICA AGREGADA PARA ARCHIVAR PROYECTO ---
+
+  // Función para selección visual de botones en modal Archivar
+  function selectEstado(estado) {
+      $('#inputEstadoArchivo').val(estado);
+      $('#btnFinalizado').removeClass('btn-success text-white').addClass('btn-light');
+      $('#btnSuspendido').removeClass('btn-warning text-white').addClass('btn-light');
+
+      if (estado === 'Finalizado') {
+          $('#btnFinalizado').removeClass('btn-light').addClass('btn-success text-white');
+      } else {
+          $('#btnSuspendido').removeClass('btn-light').addClass('btn-warning text-white');
+      }
+  }
+
+  // Función para desarchivar el proyecto (volver a estado Activo)
+  function desarchivarProyecto() {
+    var urlDesarchivar = '{% url "ots-list" %}' + '{{ot.id}}/';
+    $.ajax({
+        url: urlDesarchivar,
+        method: "PATCH",
+        contentType: "application/json",
+        headers: { "X-CSRFToken": csrfToken },
+        data: JSON.stringify({
+            estado: "Activo",
+            fecha_archivo: null,
+            descripcion_archivo: null
+        }),
+        success: function (res) {
+            $.NotificationApp.send("¡Estado Actualizado!", "Proyecto desarchivado con éxito", "bottom-right", "rgba(0,0,0,0.2)", "success");
+            setTimeout(function(){ location.reload(); }, 1000);
+        },
+        error: function (xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : "Error al desarchivar";
+            $.NotificationApp.send("Error", msg, "bottom-right", "rgba(0,0,0,0.2)", "danger");
+        },
+    });
+  }
+
+  // AJAX para enviar el formulario de Archivar
+  $(document).on("submit", "#frmArchivarProyecto", function (e) {
+    e.preventDefault();
+    // Asegúrate de que esta URL exista en tu urls.py
+    var urlArchivar = '{% url "ots-list" %}'+'{{ot.id}}/'; 
+    $.ajax({
+        url: urlArchivar,
+        method: "PATCH",
+        headers: { "X-CSRFToken": csrfToken },
+        data: $(this).serialize(),
+        success: function (res) {
+            $("#mdlArchivar").modal("hide");
+            $.NotificationApp.send("¡Estado Actualizado!", res.message || "Proyecto archivado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+            
+            // Recargar para ver cambios
+            setTimeout(function(){ location.reload(); }, 1000);
+        },
+        error: function (xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : "Error al archivar";
+            $.NotificationApp.send("Error", msg, "bottom-right", "rgba(0,0,0,0.2)", "danger");
+        },
+    });
+});
+
+</script>
+{% endblock %}

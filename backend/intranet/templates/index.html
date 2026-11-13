@@ -1,0 +1,744 @@
+{% extends 'base.html' %}{% load static %} {% block title %}Ingresar Actividad{% endblock title %} {% block vendor_css %}
+
+<link
+  href="https://cdn.datatables.net/rowgroup/1.5.1/css/rowGroup.bootstrap5.min.css"
+  rel="stylesheet"
+  integrity="sha384-Rj6fkZegbvuzZ6XuR6+R7a5orEwiiWM1rlq7854UVoNPRoYhPH9hOzCYeIppf4qw"
+  crossorigin="anonymous"
+/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css" />
+<link href="{% static 'vendor/quill/quill.core.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'vendor/quill/quill.snow.css' %}" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css" />
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/material.css" />
+{% endblock vendor_css %} {% block vendor_js %}
+<script
+  src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.min.js"
+  integrity="sha384-T3BVwaNY2bpNuIPnMFf2CxjIZZAkCXv6+GxwAs50oId58u5/TIAvrY1eR3+aAHjH"
+  crossorigin="anonymous"
+></script>
+<script src="https://cdn.datatables.net/plug-ins/2.2.2/dataRender/datetime.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<script src="{% static 'vendor/quill/quill.min.js' %}"></script>
+{% endblock vendor_js %} {% block content %}
+
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box d-flex justify-content-between align-items-center">
+      <h4 class="page-title">Ingresar Actividades</h4>
+      <button type="button" id="btnAyudaInicio" class="btn btn-info btn-sm"><i class="mdi mdi-help-circle me-1"></i> Ayuda</button>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card mb-4 shadow {% if tracker %}ribbon-box{% endif %}">
+      <div class="card-body">
+        {% if tracker and ribbon %}
+        <div class="ribbon-two ribbon-two-secondary">
+          <span id="ribbonSpan">{{ribbon.estado}}</span>
+        </div>
+        {% endif %}
+
+        <form class="ingreso" id="frmIngActividad" method="post" action="{% if tracker %}{% url 'end_actividad' %}{% else %}#{% endif %}">
+          {% csrf_token %}
+          <input type="hidden" id="txtID" name="id" value="{{ tracker.id }}" />
+          <input type="hidden" id="id_col" name="id_col" value="{{user.id}}" />
+
+          <div class="row g-2">
+            <div class="col-md-6">
+              <h5 class="mb-3">Detalle de Actividad</h5>
+              <div class="row g-2">
+                <div class="col-md-12 mb-3">
+                  <label for="sltOT" class="form-label">OT</label>
+                  {% if tracker %}
+                  <input type="text" class="form-control" value="{{ tracker.ot }}" disabled="" />
+                  {% else %} {{form.ot}} {% endif %}
+                </div>
+
+                <div class="col-md-12 mb-3">
+                  <label for="sltTarea" class="form-label">Tarea</label>
+                  {% if tracker %}
+                  <input type="text" class="form-control" id="txtTareaNombre" value="{{ tracker.tarea }}" disabled="" />
+                  {% else %} {{form.tarea}} {% endif %}
+                </div>
+              </div>
+              <div class="col-md-12 mb-3">
+                <label for="comentario" class="form-label">Anotación Relevante</label>{% if tracker %}<span
+                  id="saveStatus"
+                  class="ms-2 small"
+                ></span>{% endif %}
+                <input
+                  type="text"
+                  class="form-control"
+                  id="comentario"
+                  name="comentario"
+                  value="{{ tracker.comentario }}"
+                  maxlength="150"
+                />
+                <div class="valid-feedback" id="caracteres-restantes"></div>
+                <div class="invalid-feedback">Debe tener entre 3 y 150 caracteres.</div>
+              </div>
+              <div class="row g-2">
+                {% if user.colaborador.area.nombre == "Proyectos y Diseños" %}
+                <div class="col-md-12 mb-3">
+                    <label for="duracion" class="form-label" id="label-duracion">Tiempo de compromiso de la tarea</label>
+                    
+                    {% if tracker %}
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="duracion" 
+                            name="duracion" 
+                            value="" 
+                            data-estimado-segundos="{{ tracker.get_duracion_seconds }}" 
+                            disabled
+                        />
+                    {% else %}
+                        <div class="input-group">
+                          <input 
+                            type="number" 
+                            class="form-control" 
+                            id="duracion" 
+                            name="duracion"
+                            placeholder="Ingrese minutos (Ej. 90)" 
+                            min="1"
+                            max="999"
+                            disabled=""
+                            required
+                          />
+                          <button class="btn btn-primary d-none dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">?</button>
+                          <div class="dropdown-menu" id="duracionPresets">
+                          </div>
+                        </div>
+                        <div class="mt-1" style="font-size: 0.8em;">
+                            <span class="badge bg-dark text-light">Este tiempo esta por los reportes de la base de datos</span>
+                        </div>
+                    {% endif %}
+                </div>                
+                {% endif %}
+                
+                <div class="col-md-3 mb-3">
+                  <label for="cronometro" class="form-label">Tiempo de compromiso de desarrollo y termino de la tarea</label>
+                  <input type="text" readonly class="form-control-plaintext" id="cronometro" data-hora-inicial="{{ tracker.inicio|date:'Y-m-d H:i:s' }}" value="00:00:00"/>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                  <div class="mt-3">
+                    {% if tracker %}
+                      <button type="submit" class="btn btn-danger" id="btnDetener">Detener</button>
+                    {% else %}
+                      <button type="submit" class="btn btn-primary" id="btnIniciar">Iniciar</button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 border-start ps-4">
+              <h5 class="mb-3">Instrucciones del Proyecto</h5>
+              <div id="proyecto-instrucciones">
+                {% if tracker %}
+                {{tracker.ot.descripcion|safe}}
+                {% else %}
+                <p class="text-muted">Seleccione una OT para ver las instrucciones y detalles del proyecto.</p>
+                {% endif %}
+              </div>
+            </div>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <table id="table" class="table table-hover table-striped dt-responsive w-100">
+          <thead class="table-dark">
+            <tr>
+              <th class="text-center">OT - Actividad</th>
+              <th class="text-center">Info</th>
+              <th class="text-center">Proyecto</th>
+              <th class="text-center">Inicio</th>
+              <th class="text-center">Fin</th>
+              <th class="text-center">Fecha</th>
+              <th class="text-center">Total</th>
+              <th class="text-center" id="columnaReanudar">Reanudar</th>
+              <th class="text-center"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include 'partials/_modals/modal_delete_actividad.html' %} {% include 'partials/_modals/modal_edit_actividad.html' %} {% endblock %}
+{% block page_js %}
+<script src="{% static 'js/pages/index.js' %}"></script>
+<script>
+  // --- VARIABLES GLOBALES ---
+  let notificacionEnviada = false;
+  let intervalo = null;
+
+  // --- 1. REGLAS DE TIEMPO (DEFINIDAS POR LA FOTO) ---
+  const REGLAS_TIEMPO = {
+    "B.2":  { master: [0, 149],   junior: [150, 219], basico: [220, 289], muy_basico: [290, 390] }, 
+    "B.13": { master: [0, 119],   junior: [120, 179], basico: [180, 239], muy_basico: [240, 360] }, 
+    "B.10": { master: [0, 59],    junior: [60, 149],  basico: [150, 209], muy_basico: [210, 240] }, 
+    "B.11": { master: [0, 119],   junior: [120, 179], basico: [180, 239], muy_basico: [240, 300] }, 
+    "B.12": { master: [0, 59],    junior: [60, 119],  basico: [120, 179], muy_basico: [180, 240] }, 
+  };
+
+  const COLORES = {
+      master: "dark",
+      junior: "success",
+      basico: "warning",
+      muy_basico: "danger",
+  };
+
+  const NIVELES_LABEL = {
+    master: "Master",
+    junior: "Junior",
+    basico: "Básico",
+    muy_basico: "Muy básico"
+  };
+
+  // --- 2. VALIDAR COLORES AL ESCRIBIR O CARGAR ---
+  function validarColoresDuracion() {
+    let $input = $("#duracion");
+    let nombreTarea = "";
+    
+    // 1. Obtener nombre de la tarea
+    let $select = $("#sltTarea");
+    if ($select.length > 0 && $select.val()) {
+        nombreTarea = $("#sltTarea option:selected").text();
+    }
+    if (!nombreTarea) {
+        nombreTarea = $("#txtTareaNombre").val() || "";
+    }
+
+    let valorActual = parseInt($input.val(), 10);
+    if (isNaN(valorActual)) valorActual = null;
+
+    // 2. Buscar la regla específica
+    let reglaEncontrada = null;
+    for (const [clave, rangos] of Object.entries(REGLAS_TIEMPO)) {
+        if (nombreTarea.includes(clave)) {
+            reglaEncontrada = rangos;
+            break; 
+        }
+    }
+
+    let $dropdownMenu = $("#duracionPresets");
+    let $dropdownButton = $dropdownMenu.siblings("button");
+
+    if (!reglaEncontrada) {
+        $input.removeClass("border border-3 border-dark border-success border-warning border-danger");
+        $dropdownButton.addClass("d-none");
+        $dropdownMenu.html("");
+        return;
+    }
+
+    // --- BLOQUEO DE MÁXIMO ---
+    let limiteSuperior = reglaEncontrada.muy_basico[1];
+    
+    if (valorActual !== null && valorActual > limiteSuperior) {
+        $input.val(limiteSuperior); // Forzamos el valor al máximo permitido
+        valorActual = limiteSuperior; // Actualizamos la variable para el color
+    }
+    // -------------------------
+
+    // 3. Aplicar colores (usando valorActual)
+    let color;
+    if (valorActual === null || valorActual <= reglaEncontrada.master[1]) {
+        color = COLORES.master; 
+    } else if (valorActual <= reglaEncontrada.junior[1]) {
+        color = COLORES.junior;
+    } else if (valorActual <= reglaEncontrada.basico[1]) {
+        color = COLORES.basico;
+    } else {
+        color = COLORES.muy_basico;
+    }
+
+    $dropdownButton.removeClass("d-none");
+    $input.removeClass("border border-3 border-dark border-success border-warning border-danger");
+    $input.addClass("border border-3 border-" + color);
+
+    // 4. Construir leyenda para el dropdown
+    let ordenNiveles = ["master", "junior", "basico", "muy_basico"];
+    let html = `<div class="px-3 py-2" style="min-width:220px;">`;
+    html += `<div class="small text-muted mb-2">Leyenda de niveles y rangos (minutos)</div>`;
+    ordenNiveles.forEach(function(nivel) {
+      let rango = reglaEncontrada[nivel];
+      if (!rango) return;
+      let badgeColor = COLORES[nivel] || "secondary";
+      html += `<div class="d-flex align-items-center mb-1"><span class="badge bg-${badgeColor} me-2" style="width:12px;height:12px;border-radius:3px;"></span><div class="flex-grow-1"><strong>${NIVELES_LABEL[nivel]}</strong> <span class="text-muted">(${rango[0]} - ${rango[1]} min)</span></div></div>`;
+    });
+    html += `<hr class="my-2">`;
+    html += `<div class="small text-muted">Máx. permitido: <strong>${limiteSuperior} min</strong>. Si excede, se ajustará automáticamente.</div>`;
+    html += `</div>`;
+
+    $dropdownMenu.html(html);
+  }
+
+  // --- 3. CRONOMETRO Y LÓGICA DE TIEMPO ---
+  function actualizarCronometro() {
+    let horaInicial = $("#cronometro").data("hora-inicial");
+    if (!horaInicial) return;
+
+    let inicio = new Date(horaInicial);
+    let ahora = new Date();
+    let diferenciaTotalMs = ahora - inicio; 
+    
+    let segundosTotales = Math.floor(diferenciaTotalMs / 1000);
+    let horas = Math.floor(segundosTotales / 3600);
+    let minutos = Math.floor((segundosTotales % 3600) / 60);
+    let segundos = segundosTotales % 60;
+
+    let formatoTiempo =
+      (horas < 10 ? "0" + horas : horas) + ":" +
+      (minutos < 10 ? "0" + minutos : minutos) + ":" +
+      (segundos < 10 ? "0" + segundos : segundos)
+
+    if (formatoTiempo.trim() !== "NaN:NaN:NaN.NaN") {
+      $("#cronometro").val(formatoTiempo);
+    }
+
+    // Ejecutamos validación de colores en cada tick para asegurar que el borde se mantiene
+    validarColoresDuracion();
+
+    let $inputEstimado = $("#duracion");
+    let estimadoSegundos = parseInt($inputEstimado.data("estimado-segundos"), 10);
+
+    if (!estimadoSegundos || estimadoSegundos <= 0) return;
+
+    let estimadoTotalMs = estimadoSegundos * 1000;
+    let restanteTotalMs = estimadoTotalMs - diferenciaTotalMs;
+    
+    // SI SE ACABÓ EL TIEMPO: Forzamos ROJO (Desviación)
+    if (restanteTotalMs <= 0) {
+        $inputEstimado.css({"border-color": "red", "color": "red"});
+         if (!notificacionEnviada) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("⚠️ ¡Tiempo culminado!", { body: "Se ha iniciado el tiempo de desviación." });
+            }
+            notificacionEnviada = true;
+        }
+    }
+
+    // Formateo de cuenta regresiva o conteo progresivo de desviación
+    let msParaMostrar = Math.abs(restanteTotalMs);
+    let prefijo = restanteTotalMs <= 0 ? "-" : "";
+
+    let restHoras = Math.floor(msParaMostrar / (1000 * 60 * 60));
+    let restMinutos = Math.floor((msParaMostrar % (1000 * 60 * 60)) / (1000 * 60));
+    let restSegundos = Math.floor((msParaMostrar % (1000 * 60)) / 1000);
+    let restMilis = Math.floor((msParaMostrar % 1000) / 10);
+
+    let formatoRestante =
+      (restHoras < 10 ? "0" + restHoras : restHoras) + ":" +
+      (restMinutos < 10 ? "0" + restMinutos : restMinutos) + ":" +
+      (restSegundos < 10 ? "0" + restSegundos : restSegundos) + "." +
+      (restMilis < 10 ? "0" + restMilis : restMilis);
+
+    $inputEstimado.val(prefijo + formatoRestante);
+  }
+
+  function cargarInstruccionesProyecto(otId) {
+    let $instruccionesDiv = $("#proyecto-instrucciones");
+    $instruccionesDiv.html('<div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div>');
+    const urlAPI = `{% url 'ots-list' %}` + otId + "/";
+    $.ajax({
+        url: urlAPI, 
+        type: 'GET',
+        success: function(data) {
+            if (data && data.descripcion) {
+                $instruccionesDiv.html(`
+                    <hr class="m-0">
+                    <h6 class="text-center text-primary fw-bold mt-2 mb-1">¡IMPORTANTE! LEA LAS INSTRUCCIONES</h6>
+                    <h6 class="mb-2">OT: ${data.id_str}</h6>
+                    <div class="ql-snow"><div class="ql-editor">${data.descripcion}</div></div>
+                    <hr class="m-0">
+                `);
+            } else {
+                $instruccionesDiv.html('<p class="text-warning">No se encontraron instrucciones detalladas.</p>');
+            }
+        },
+        error: function(xhr, status, error) {
+            $instruccionesDiv.html('<p class="text-danger">Error al cargar instrucciones.</p>');
+        }
+    });
+  }
+  
+  function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+  }
+
+  function initializeTippy() {
+    tippy(".info-icon", {
+      content(reference) {
+        const estado = reference.getAttribute("data-estado");
+        const titulo = reference.getAttribute("data-titulo");
+        const maxreing = reference.getAttribute("data-maxreing");
+        const vencimiento = reference.getAttribute("data-vencimiento");
+        const color = colorMapping[estado] || "#6c757d";
+        return `<div style="text-align: left; padding: 5px;"><div style="margin-bottom: 8px;"><strong style="color: #495057;">Estado:</strong> <span style="color: ${color}; font-weight: 600;">${estado}</span></div><div style="margin-bottom: 8px;"><strong style="color: #495057;">Título:</strong> <span style="color: #212529;">${titulo}</span></div><div style="margin-bottom: 8px;"><strong style="color: #495057;">Máx. Reingreso:</strong> <span style="color: #212529;">${maxreing}</span></div><div><strong style="color: #495057;">Vencimiento:</strong> <span style="color: #212529;">${vencimiento}</span></div></div>`;
+      },
+      allowHTML: true,
+      theme: "material",
+      placement: "right",
+      arrow: true,
+      interactive: true,
+      maxWidth: 350,
+    });
+  }
+
+  function guardarComentario(id, comentario) {
+    if (!id || id === "None") return; 
+    let $status = $("#saveStatus");
+    if (comentario.length < 3 || comentario.length > 150) {
+      $("#comentario").removeClass("is-valid").addClass("is-invalid");
+      $status.html('<i class="mdi mdi-alert-circle-outline text-danger"></i> Comentario no válido.');
+      if (comentario.length < 3) return;
+    }
+    $("#comentario").removeClass("is-invalid").addClass("is-valid");
+    $status.html('<i class="mdi mdi-spin mdi-loading"></i> Guardando...');
+    $.ajax({
+      url: `../api/actividades/${id}/`, 
+      type: "PATCH",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      contentType: "application/json",
+      data: JSON.stringify({ comentario: comentario }),
+      success: function (data) {
+        $status.html('<i class="mdi mdi-check-circle-outline text-success"></i> Guardado.');
+        $.NotificationApp.send("¡Anotación Guardada!", "Tu comentario se actualizó.", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr, status, error) {
+        $status.html('<i class="mdi mdi-alert-circle-outline text-danger"></i> Error al guardar.');
+      },
+    });
+  }
+
+  // --- 4. CARGA DE TAREAS Y DURACION ---
+  function cargarTareas(otId) {
+    let url = "{% url 'tarea-list' %}?ot=" + otId + "&ordering=titulo";
+    $.ajax({
+      url: url,
+      data: { ot: otId },
+      success: function (data) {
+        let tareaSelect = $("#sltTarea");
+        tareaSelect.empty();
+        let results = data.results || data;
+        
+        tareaSelect.append('<option value="">Seleccione Tarea...</option>');
+
+        if (results && results.length) {
+          results.forEach(function (tarea) {
+            if (tarea.estado !== "done") {
+              tareaSelect.append(`<option value="${tarea.id}">${tarea.titulo}</option>`);
+            }
+          });
+        } else {
+             tareaSelect.append('<option value="">No hay tareas disponibles</option>');
+        }
+      },
+    });
+  }
+
+  function cargarTareas2(otId, selectedTareaId = null) {
+      let url = "{% url 'tarea-list' %}?ot=" + otId + "&ordering=titulo";
+      $.ajax({
+          url: url,
+          data: { ot: otId },
+          success: function (data) {
+              let tareaSelect = $('select[name="tarea"]');
+              tareaSelect.empty();
+              tareaSelect.append('<option value="">---------</option>');
+              let results = data.results || data;
+              if (results && results.length) {
+                  results.forEach(function (tarea) {
+                      if (tarea.estado !== "done" || (selectedTareaId && tarea.id == selectedTareaId)) {
+                          let selected = selectedTareaId && tarea.id == selectedTareaId ? "selected" : "";
+                          tareaSelect.append(`<option value="${tarea.id}" ${selected}>${tarea.titulo}</option>`);
+                      }
+                  });
+              }
+          },
+      });
+  }
+
+  function cargarDuracion(tareaId) {
+    $.get(`../api/tarea/${tareaId}/`, function (data) {
+        let $inputDuracion = $("#duracion");
+        $inputDuracion.val("");
+        $inputDuracion.prop("disabled", false); 
+
+        if (data.duracion_minutos !== null && data.duracion_minutos !== undefined) {
+            
+            if (data.duracion_minutos > 0) {
+                $inputDuracion.val(data.duracion_minutos);
+                $inputDuracion.prop("disabled", true); 
+            } else {
+                $inputDuracion.val(""); 
+            }
+        }
+
+        validarColoresDuracion();
+    }).fail(function() {
+        console.error("Error al conectar con la API.");
+        $("#duracion").prop("disabled", false);
+    });
+  }
+
+  // --- DOCUMENT READY ---
+  $(document).ready(function () {
+    $("#duracion").on("input keyup", function() {
+        validarColoresDuracion();
+    });
+
+    cargarTareas($("#sltOT").val());
+
+    setInterval(function() {
+      var now = new Date();
+      if (now.getHours() === 13 && now.getMinutes() === 0 && now.getSeconds() < 2) {
+          var areaUsuario = "{{ user.colaborador.area.nombre }}"; 
+          var hayActividad = $("#txtID").val(); 
+          if (areaUsuario === "Proyectos y Diseños" && hayActividad) {
+              document.getElementById("frmIngActividad").submit();
+          }
+      }
+    }, 1000);
+    
+    $(".ingreso #sltOT").select2();
+    moment.locale("es");
+    var groupColumn = 5;
+    
+    var table = $("#table").DataTable({
+      pageLength: 50,
+      order: [[groupColumn, "desc"]],
+      processing: true,
+      serverSide: true,
+      ordering: false,
+      rowId: "id",
+      language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+      ajax: { url: "{% url 'obtener_actividades_index' %}", type: "GET" },
+      columns: [
+        {
+          data: null,
+          render: function (data) {
+            return "<strong>" + data.actividad_desc + " </strong>" + data.comentario;
+          },
+        },
+        {
+          data: null,
+          className: "text-center",
+          render: function (data) {
+            const e = data.expediente_estado || "", t = data.expediente_numero || "", m = data.expediente_reingreso || "", v = data.expediente_vencimiento || "";
+            return ('<i class="uil uil-info-circle info-icon" data-estado="' + e + '" data-titulo="' + t + '" data-maxreing="' + m + '" data-vencimiento="' + v + '" style="font-size: 20px; cursor: pointer; color: #0d6efd;"></i>');
+          },
+        },
+        { data: "ot", className: "text-center" },
+        { data: "inicio", className: "text-center" },
+        { data: "fin", className: "text-center" },
+        { data: "fecha", className: "text-center" },
+        {
+          data: "total",
+          className: "text-center",
+          render: function (data) { return '<span class="badge bg-primary">' + data + "</span>"; },
+        },
+        {
+          data: "id",
+          className: "text-center",
+          render: function (data) {
+            return ('<button type="button" class="btn btn-sm btn-outline-success duplicar btnReanudar" title="Reanudar actividad" data-id="' + data + '"> <i class="uil uil-play"></i></button>');
+          },
+        },
+        {
+          data: "id",
+          className: "text-center",
+          render: function (data) {
+            return '<div class="dropdown card-widgets"><a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a><div class="dropdown-menu dropdown-menu-end"><a href="javascript:void(0);" class="dropdown-item edit"><i class="uil uil-edit me-1"></i>Editar</a><a href="javascript:void(0);" class="dropdown-item text-danger delete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a></div></div>';
+          },
+        },
+      ],
+      columnDefs: [ { targets: 5, visible: false } ],
+      rowGroup: {
+        dataSrc: "fecha",
+        startRender: function (rows, group) { return moment(group).format("MMM. DD, YYYY"); },
+      },
+      drawCallback: function () { initializeTippy(); },
+    });
+    
+    initializeTippy();
+
+    if ($("#cronometro").length > 0) {
+      actualizarCronometro();
+      intervalo = setInterval(actualizarCronometro, 41);
+      let $status = $("#saveStatus");
+      const debouncedGuardar = debounce((id, comentario) => guardarComentario(id, comentario), 1500);
+      $("#comentario").on("input", function () {
+        let id = $("#txtID").val();
+        let comentario = $(this).val();
+        $status.html('<i class="mdi mdi-pencil-outline"></i> Escribiendo...');
+        debouncedGuardar(id, comentario);
+      });
+    }
+
+    // Inicializar colores al cargar (por si ya hay tracker activo)
+    validarColoresDuracion();
+
+    var $ribbonSpan = $("#ribbonSpan");
+    if ($ribbonSpan.length) {
+      var status = $ribbonSpan.text().trim();
+      var color = colorMapping[status] || "#6c757d";
+      $ribbonSpan.css("background-color", color);
+    }
+  });
+
+  // --- Lógica del Submit ---
+  $("#frmIngActividad").on("submit", function (event) {
+    event.preventDefault();
+    if ($("#btnDetener").length > 0) {
+      if (intervalo) clearInterval(intervalo);
+      this.submit(); 
+      return;
+    }
+    
+    let tareaSeleccionada = $("#sltTarea").val();
+    if (!tareaSeleccionada || tareaSeleccionada === "") {
+        $.NotificationApp.send("Error", "Debes seleccionar una tarea válida para iniciar.", "bottom-right", "rgba(0,0,0,0.2)", "danger");
+        return; 
+    }
+
+    let duracionManual = $("#duracion").val();
+    let submitButton = $("#btnIniciar");
+    submitButton.prop("disabled", true);
+
+    const data = {
+      user: $("#id_col").val(),
+      ot: $("#sltOT").val(),
+      tarea: tareaSeleccionada,
+      duracion_input: duracionManual, 
+      comentario: $("#comentario").val(),
+    };
+    
+    $.ajax({
+      url: "../api/actividades/", 
+      type: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      contentType: "application/json",
+      data: JSON.stringify(data),
+      success: function (data) {
+        localStorage.setItem("formSubmitted", "true"); 
+        location.reload();
+      },
+      error: function (xhr, status, error) {
+        submitButton.prop("disabled", false);
+        $.NotificationApp.send("Error", "No se pudo iniciar la actividad.", "bottom-right", "rgba(0,0,0,0.2)", "danger");
+      },
+    });
+  });
+
+  $("#sltOT").change(function () {
+    let otId = $(this).val();
+    if (otId) {
+      cargarTareas(otId);
+      cargarInstruccionesProyecto(otId);
+    } else {
+      $("#sltTarea").empty().append('<option value="">Seleccione Tarea...</option>');
+      $("#proyecto-instrucciones").html('<p class="text-muted">Seleccione una OT para ver las instrucciones y detalles del proyecto.</p>');
+    }
+  });
+
+  $("#sltTarea").change(function () {
+    let tareaId = $(this).val();
+    if (tareaId) {
+      cargarDuracion(tareaId);
+      validarColoresDuracion();
+    } else {
+      $("#duracion").val("").prop("disabled", false).removeClass("border-danger border-success border-warning border-dark");
+      $("#duracionPresets").siblings("button").addClass("d-none");
+    }
+  });
+
+  // ... (Resto de botones duplicar, editar, borrar siguen igual)
+  $(document).on("click", ".duplicar", function () {
+    let actividadId = $(this).closest("tr").attr("id");
+    $.ajax({
+      url: "../api/actividades/" + actividadId + "/reanudar/",
+      type: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      contentType: "application/json",
+      success: function (data) { location.reload(); },
+      error: function (xhr, status, error) { alert("Error:", error); },
+    });
+  });
+
+  let currentTaskId = null;
+  $(document).on("click", ".edit", function () {
+    currentTaskId = $(this).closest("tr").attr("id");
+    $("#frmEdit").attr("data-task-id", currentTaskId);
+    $.get(`../api/actividades/${currentTaskId}/`, function (data) {
+      cargarTareas2(data.ot, data.tarea);
+      $('select[name="ot"]').val(data.ot);
+      $('select[name="tarea"]').val(data.tarea);
+      $('textarea[name="comentario"]').val(data.comentario);
+      let fecha = moment(data.inicio).format("YYYY-MM-DDTHH:mm");
+      let fechaFin = moment(data.fin).format("YYYY-MM-DDTHH:mm");
+      $('input[name="inicio"]').val(fecha);
+      $('input[name="fin"]').val(fechaFin);
+    });
+    $("#mdlEdit").modal("show");
+  });
+
+  $(document).on("submit", "#frmEdit", function (e) {
+    e.preventDefault();
+    $.ajax({
+      url: `../api/actividades/${currentTaskId}/`,
+      method: "PATCH",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: $(this).serialize(),
+      success: function (res) {
+        $("#mdlEdit").modal("hide");
+        location.reload();
+      },
+      error: function (xhr) { alert("Error al actualizar: " + xhr.responseText); },
+    });
+  });
+
+  $(document).on("click", ".delete", function () {
+    fila = $(this).closest("tr");
+    id_act = fila.attr("id");
+    $("#mdlDelete").modal("show");
+  });
+
+  $(document).on("click", ".btnBorrar", function () {
+    $.ajax({
+      type: "DELETE",
+      url: `../api/actividades/${id_act}/`,
+      contentType: "application/json",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      success: function (data) {
+        $("#mdlDelete").modal("hide");
+        $("#table").DataTable().ajax.reload(null, false);
+        $.NotificationApp.send("Actividad eliminada con éxito", "", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr, status, error) {
+        $.NotificationApp.send("Error al eliminar la actividad", "", "bottom-right", "rgba(0,0,0,0.2)", "danger");
+      },
+    });
+  });
+</script>
+{% endblock %}

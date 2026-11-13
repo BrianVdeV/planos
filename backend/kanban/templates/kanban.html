@@ -1,0 +1,266 @@
+{% extends 'base.html' %}{% load static %} {% block title %}Kanban{% endblock title %} {% block vendor_js %}
+<script src="{% static 'vendor/dragula/dragula.min.js'%}"></script>
+<script src="{% static 'js/ui/component.dragula.js'%}"></script>
+<script src="{% static 'vendor/jquery-mask-plugin/jquery.mask.min.js' %}"></script>
+{% endblock vendor_js %} {% block content %}
+<!-- start page title -->
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">
+        Procesos del dia
+      </h4>
+    </div>
+  </div>
+</div>
+<!-- end page title -->
+{% if request.user.is_superuser %}
+<div class="row filter">
+  <div class="col-auto">
+    <div class="mb-3">{{form.user}}</div>
+  </div>
+  <div class="col-6">
+    <div class="mb-3">{{form.ot}}</div>
+  </div>
+  <div class="col-auto">
+    <div class="mb-3">
+      <select class="form-select" id="sltVencimientoRango">
+        <option value="">Cualquier fecha</option>
+        <option value="today">Hoy</option>
+        <option value="pastweek" selected>Semana anterior</option>
+        <option value="thisweek">Semana actual</option>
+        <option value="thismonth">Mes actual</option>
+        <option value="thisyear">Año corriente</option>
+      </select>
+    </div>
+  </div>
+</div>
+{% endif %}
+<div class="row">
+  <div class="col-12">
+    <div class="board">
+      <div class="tasks">
+        <h5 class="mt-0 task-header text-white bg-danger">POR HACER</h5>
+        <div id="task-list-one" class="task-list-items"></div>
+      </div>
+      <div class="tasks">
+        <h5 class="mt-0 task-header text-white bg-warning">EN PROGRESO</h5>
+        <div id="task-list-two" class="task-list-items"></div>
+      </div>
+      <div class="tasks">
+        <h5 class="mt-0 task-header text-white bg-info">EN REVISIÓN</h5>
+        <div id="task-list-three" class="task-list-items"></div>
+      </div>
+      <div class="tasks">
+        <h5 class="mt-0 task-header text-white bg-success">HECHO</h5>
+        <div id="task-list-four" class="task-list-items"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add new task modal -->
+{% include 'partials/_offcanvas/kanban_edit.html' %}{% endblock %} 
+{% block page_js %}
+<script>
+  const IS_SUPERUSER = {{ request.user.is_superuser|yesno:"true,false" }};
+
+  const borderColorMap = {
+    todo: "danger",
+    in_progress: "warning",
+    review: "info",
+    done: "success",
+  };
+
+  // --- 1. Formato visual para Select2 (Foto + Texto) ---
+  function formatUserOption(state) {
+    if (!state.id) { return state.text; } 
+    var avatarUrl = $(state.element).data('avatar') || "/static/images/avatar-1.svg"; 
+    var $state = $(
+      '<span><img src="' + avatarUrl + '" class="avatar-xs rounded-circle me-1" /> ' + state.text + '</span>'
+    );
+    return $state;
+  };
+
+  // --- Listeners de Filtros ---
+  $(document).on("change", ".filter #sltUsuario", function () { loadTasks(); });
+  $(document).on("change", ".filter #sltOt", function () { loadTasks(); });
+  $(document).on("change", ".filter #sltVencimientoRango", function () { loadTasks(); });
+
+  // --- Cargar Tareas en el Tablero ---
+  function loadTasks() {
+    const userId = $(".filter #sltUsuario").val();
+    const otId = $(".filter #sltOt").val();
+    const vencimientoRango = $(".filter #sltVencimientoRango").val();
+    let url = URL;
+    let params = [];
+    if (userId) params.push("user=" + userId);
+    if (otId) params.push("ot=" + otId);
+    if (vencimientoRango) params.push("vencimiento_rango=" + vencimientoRango);
+    
+    if (params.length > 0) {
+      url += "?" + params.join("&");
+    }
+
+    $.get(url, function (data) {
+      let tareas = data.results || data;
+      $("#task-list-one, #task-list-two, #task-list-three, #task-list-four").empty();
+      
+      tareas.forEach((tarea) => {
+        let vencimientoFormateado = tarea.vencimiento ? moment(tarea.vencimiento).format("DD/MM/YY") : "--";
+        let vencimientoHtml = IS_SUPERUSER ? `<div class="float-end">${vencimientoFormateado}</div>` : "";
+        let borderColor = borderColorMap[tarea.estado] || "secondary";
+        
+        // --- LÓGICA DE FOTOS (Mantenemos tu código actual) ---
+        let userHtml = '';
+        if (tarea.responsables_info && tarea.responsables_info.length > 0) {
+            tarea.responsables_info.forEach(u => {
+                userHtml += `
+                <a class="d-inline-block" href="#" data-bs-container="#tooltip-container" data-bs-toggle="tooltip" data-bs-title="${u.username}">
+                  <img src="${u.foto}" alt="${u.username}" class="avatar-xs rounded-circle"/>
+                </a>`;
+            });
+        } else {
+          userHtml = `<span class="text-muted">Sin asignar</span>`;
+        }
+
+        // --- NUEVA LÓGICA: SUPERUSUARIO vs NORMAL ---
+        
+        // 1. Atributos del Modal: Solo se los ponemos si es superusuario
+        let toggleAttributes = IS_SUPERUSER 
+            ? `data-bs-toggle="offcanvas" href="#offcanvas" role="button" aria-controls="offcanvas" style="cursor: pointer;"` 
+            : `style="cursor: default;"`;
+
+        // 2. Descripción: Solo la mostramos si NO es superusuario y si existe descripción
+        let descripcionHtml = "";
+        if (!IS_SUPERUSER && tarea.descripcion) {
+            // 'white-space: pre-wrap' respeta los saltos de línea que guardaste
+            descripcionHtml = `<p class="text-dark mt-2 mb-1 small" style="white-space: pre-wrap;">${tarea.descripcion}</p>`;
+        }
+
+        let taskElement = `
+          <div class="card border-start border-4 border-${borderColor}" data-task-id="${tarea.id}" ${toggleAttributes}>
+              <div class="card-body p-3">
+                  <h5 class="mt-2 mb-2">${tarea.titulo}</h5>
+                  
+                  ${descripcionHtml}
+
+                  <p class="text-muted small">${tarea.ot_str}</p>
+                  ${vencimientoHtml} 
+                  
+                  <div id="tooltip-container" class="mt-2">
+                      ${userHtml}
+                  </div>
+              </div>
+          </div>`;
+
+        if (tarea.estado === "todo") $("#task-list-one").append(taskElement);
+        else if (tarea.estado === "in_progress") $("#task-list-two").append(taskElement);
+        else if (tarea.estado === "review") $("#task-list-three").append(taskElement);
+        else if (tarea.estado === "done") $("#task-list-four").append(taskElement);
+      });
+    });
+  }
+
+  // --- Inicialización ---
+  $(document).ready(function () {
+    initDragula();
+    // Configuración Dragula
+    if (IS_SUPERUSER) {
+      URL = "../api/kanban/";
+      // Listeners inputs edición rápida
+      $('#offcanvas input[name="titulo"]').on("change", function () { actualizarTarea({ titulo: $(this).val() }); });
+      $('#offcanvas select[name="responsables"]').on("change", function () { actualizarTarea({ responsables: $(this).val() }); });
+      $('#offcanvas textarea[name="descripcion"]').on("change", function () { actualizarTarea({ descripcion: $(this).val() }); });
+      $('#offcanvas input[name="vencimiento"]').on("change", function () { actualizarTarea({ vencimiento: $(this).val() }); });
+      $('#offcanvas select[name="prioridad"]').on("change", function () { actualizarTarea({ prioridad: $(this).val() }); });
+      $('#offcanvas input[name="duracion"]').on("change", function () { actualizarTarea({ duracion_input: $(this).val() }); });
+    } else {
+      URL = "../api/kanban/mi-kanban/";
+    }
+    
+    loadTasks();
+    $('#sltOt').select2();
+  });
+
+  // --- LÓGICA AL ABRIR EDITAR (Clic en tarjeta) ---
+  let currentTaskId = null;
+  $(document).on("click", ".card[data-task-id]", function () {
+    
+    // NUEVO: Si NO es superusuario, detenemos la función aquí. No abre nada.
+    if (!IS_SUPERUSER) return; 
+
+    currentTaskId = $(this).data("task-id");
+    $("#form-editar-tarea").attr("data-task-id", currentTaskId);
+    $("#tiempo-registrado-display").text("Calculando...");
+
+    $.get(`../api/tarea/${currentTaskId}/`, function (data) {
+      $('input[name="titulo"]').val(data.titulo);
+      $('textarea[name="descripcion"]').val(data.descripcion);
+      $('select[name="responsables"]').val(data.responsables);
+      $('input[id="creacion"]').val(moment(data.creado).format("YYYY-MM-DD"));
+      $('input[name="vencimiento"]').val(moment(data.vencimiento).format("YYYY-MM-DD"));
+      $('input[name="prioridad"]').val(data.prioridad);
+      $('input[name="duracion"]').val(data.duracion);
+      $("#registrado").val(data.horas_trabajadas || "00:00");
+    });
+  });
+  
+  function actualizarTarea(data) {
+    $.ajax({
+      url: `../api/tarea/${currentTaskId}/`,
+      type: "PATCH",
+      contentType: "application/json",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: JSON.stringify(data),
+      success: function () {
+        loadTasks();
+        $.NotificationApp.send("¡Bien Hecho!", "Actualizado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr) {
+        $.NotificationApp.send("¡Error!", xhr.statusText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+      },
+    });
+  }
+
+  // Dragula helpers
+  function initDragula() {
+    var drake = dragula([document.getElementById("task-list-one"), document.getElementById("task-list-two"), document.getElementById("task-list-three"), document.getElementById("task-list-four")], { revertOnSpill: true });
+    handleDragulaEvents(drake);
+  }
+
+  function getEstadoFromContainer(containerId) {
+    return containerId === "task-list-one" ? "todo" : containerId === "task-list-two" ? "in_progress" : containerId === "task-list-three" ? "review" : "done";
+  }
+  function handleDragulaEvents(drake) {
+    drake.on("drop", function (el, target, source, sibling) {
+      const cards = $(target).children(".card");
+      let newStatus = getEstadoFromContainer(target.id);
+      el.classList.remove("border-danger", "border-info", "border-warning", "border-success");
+      el.classList.add(`border-${borderColorMap[newStatus]}`);
+      cards.each(function (index) {
+        const taskId = $(this).data("task-id");
+        $.ajax({
+          url: `../api/tarea/${taskId}/`,
+          type: "PATCH",
+          contentType: "application/json",
+          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          data: JSON.stringify({ estado: newStatus, orden: index }),
+          success: function () { $.NotificationApp.send("Ok", "Actualizado", "bottom-right", "rgba(0,0,0,0.2)", "success"); }
+        });
+      });
+    });
+  }
+  
+  $(document).on("click", "#btnIniciarKanban", function() {
+    if (!currentTaskId) return;
+    $.ajax({
+        url: `../api/tarea/${currentTaskId}/iniciar/`,
+        type: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+        success: function() { window.location.href = "{% url 'index' %}"; },
+        error: function() { $.NotificationApp.send("Error", "Fallo al iniciar", "bottom-right", "rgba(0,0,0,0.2)", "error"); }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Calendario{% endblock title %}
+
+{% block vendor_css %}
+<link href="{% static 'vendor/fullcalendar/main.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'vendor/flatpickr/flatpickr.min.css' %}" rel="stylesheet" type="text/css" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+<script src="{% static 'vendor/fullcalendar/main.min.js'%}"></script>
+<script src="{% static 'vendor/fullcalendar/locales/es.js'%}"></script>
+<script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+{% endblock vendor_js %}
+
+{% block content %} 
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Calendario</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-lg-3">
+          <div class="d-grid">
+            <button class="btn btn-lg font-16 btn-danger" data-bs-toggle="modal" data-bs-target="#mdl">
+                <i class="mdi mdi-plus-circle-outline"></i> Crear Evento
+            </button>
+          </div>
+          <div id="legend-events" class="mt-3 p-3 border rounded">
+            <h4 class="text-center mb-3">Leyenda</h4>
+            <div class="external-event bg-info-lighten text-info"><i class="mdi mdi-checkbox-blank-circle me-2"></i> Cumpleaños</div>
+            <div class="external-event bg-success-lighten text-success"><i class="mdi mdi-checkbox-blank-circle me-2"></i> Vacaciones</div>
+            <div class="external-event bg-warning-lighten text-warning"><i class="mdi mdi-checkbox-blank-circle me-2"></i> Reingreso</div>
+            <div class="external-event bg-danger-lighten text-danger"><i class="mdi mdi-checkbox-blank-circle me-2"></i> Vencimiento</div>
+            <div class="external-event bg-secondary-lighten text-secondary"><i class="mdi mdi-checkbox-blank-circle me-2"></i> Feriados</div>
+          </div>
+        </div>
+        <div class="col-lg-9">
+          <div class="mt-4 mt-lg-0">
+            <div id="calendar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="mdlEvento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Detalles del Evento</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Título:</strong> <span id="mdlTitulo"></span></p>
+        <p><strong>Inicio:</strong> <span id="mdlInicio"></span></p>
+        <p><strong>Fin:</strong> <span id="mdlFin"></span></p>
+        <p><strong>Ot:</strong> <span id="mdlOt"></span></p>
+        <p><strong>Usuario:</strong> <span id="mdlUsuario"></span></p>
+        <p><strong>Recordatorio:</strong> <span id="mdlRecordatorio" class="badge bg-warning text-dark"></span></p>
+        <p><strong>Descripción:</strong> <span id="mdlDescripcion"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btnEliminarEvento">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% include 'partials/_modals/modal_add_evento.html' %}
+{% endblock %} 
+
+{% block page_js %}
+<script>
+  $(document).ready(function () {
+    // --- Configuración de Fechas y Horas (Tu código con allowInput) ---
+    function corregirHoraManual(instance) {
+        let input = instance.input;
+        let valor = input.value.trim();
+        if (/^\d{1,2}$/.test(valor)) {
+            let hora = parseInt(valor);
+            if (hora >= 0 && hora < 24) {
+                let horaStr = hora.toString().padStart(2, '0') + ":00";
+                instance.setDate(horaStr, true);
+            }
+        }
+    }
+
+    let fpFin = $("#txtHoraFin").flatpickr({
+        enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, locale: "es", allowInput: true,  
+        onClose: function(selectedDates, dateStr, instance) { corregirHoraManual(instance); }
+    });
+
+    $("#txtHora").flatpickr({
+        enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, locale: "es", allowInput: true,  
+        onClose: function(selectedDates, dateStr, instance) { corregirHoraManual(instance); },
+        onChange: function(selectedDates, dateStr, instance) { calcularHoraFin(dateStr); }
+    });
+
+    $("#txtHora, #txtHoraFin").on("blur keydown", function(e) {
+        if (e.type === "blur" || e.key === "Enter" || e.key === "Tab") {
+            let fp = this._flatpickr;
+            if (fp) corregirHoraManual(fp);
+        }
+    });
+
+    function calcularHoraFin(horaInicioStr) {
+        if (!horaInicioStr || !horaInicioStr.includes(':')) return;
+        let partes = horaInicioStr.split(':');
+        let hora = parseInt(partes[0]);
+        let minutos = partes[1];
+        let nuevaHora = hora + 1;
+        if (nuevaHora >= 24) nuevaHora = 0; 
+        let nuevaHoraStr = nuevaHora.toString().padStart(2, '0') + ":" + minutos;
+        fpFin.setDate(nuevaHoraStr);
+    }
+    
+    // --- FullCalendar ---
+    let calendarEl = document.getElementById("calendar");
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      firstDay: 0, 
+      themeSystem: "bootstrap",
+      locale: "es",
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth,timeGridWeek,listMonth",
+      },
+      events: function (fetchInfo, successCallback, failureCallback) {
+        $.ajax({
+            url: "{% url 'calendario-list' %}", 
+            method: "GET",
+            dataType: "json",
+            success: function (response) {
+              let eventosRaw = response.results || response;
+              let events = eventosRaw.map((event) => ({
+                  id: event.id,
+                  title: event.title,
+                  start: event.start,
+                  end: event.end,
+                  allDay: event.allDay,
+                  className: event.className,
+                  extendedProps: {
+                    ot: event.ot, // Aquí recibimos la OT del backend
+                    usuario: event.usuario,
+                    descripcion: event.descripcion,
+                    recordatorio: event.recordatorio
+                  },
+              }));
+              successCallback(events);
+            },
+            error: function () {
+              console.error("Error al cargar eventos");
+              failureCallback();
+            },
+          });
+      },
+      eventClick: function (info) {
+        info.jsEvent.preventDefault();
+        if (info.event.classNames.includes("bg-primary")) {
+          $("#mdlTitulo").text(info.event.title);
+          $("#mdlInicio").text(moment(info.event.start).format("DD/MM/YYYY HH:mm"));
+          $("#mdlFin").text(moment(info.event.end).format("DD/MM/YYYY HH:mm"));
+          $("#mdlOt").text(info.event.extendedProps.ot);
+          $("#mdlUsuario").text(info.event.extendedProps.usuario);
+          $("#mdlDescripcion").text(info.event.extendedProps.descripcion);
+          
+          let rec = info.event.extendedProps.recordatorio;
+          let textoRec = (rec && rec > 0) ? rec + " minutos antes" : "Sin aviso";
+          $("#mdlRecordatorio").text(textoRec);
+
+          $("#btnEliminarEvento").data("id", info.event.id);
+          $("#mdlEvento").modal("show");
+        }
+      },
+    });
+
+    calendar.render();
+  });
+
+  // LOGICA ELIMINAR
+  $(document).on("click", "#btnEliminarEvento", function () {
+    let eventId = $(this).data("id");
+    if (!eventId) return alert("Error: No se encuentra el ID del evento");
+    $.ajax({
+      url: `/api/eventos/${eventId}/`, 
+      type: "DELETE",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      success: function () {
+        $("#mdlEvento").modal("hide");
+        calendar.refetchEvents();
+        alert("Evento eliminado.");
+      },
+      error: function (xhr) {
+        alert("Error al eliminar: " + xhr.responseText);
+      },
+    });
+  });
+  $(document).ready(function() {
+    // 1. Agregar nueva fila de recordatorio
+    $('#btn-add-recordatorio').click(function() {
+        const row = `
+            <div class="row mb-2 recordatorio-item">
+                <div class="col-5">
+                    <input type="number" class="form-control r-cantidad" placeholder="Cantidad" min="1" required>
+                </div>
+                <div class="col-5">
+                    <select class="form-select r-unidad">
+                        <option value="minutos">Minutos</option>
+                        <option value="horas">Horas</option>
+                        <option value="dias">Días</option>
+                    </select>
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-danger btn-remove-recordatorio">X</button>
+                </div>
+            </div>
+        `;
+        $('#recordatorios-container').append(row);
+    });
+
+    // 2. Eliminar fila de recordatorio
+    $(document).on('click', '.btn-remove-recordatorio', function() {
+        $(this).closest('.recordatorio-item').remove();
+    });
+
+    // 3. Enviar el formulario
+    $('#form-evento').submit(function(e) {
+        e.preventDefault();
+
+        // Recolectar recordatorios dinámicos
+        let recordatorios = [];
+        $('.recordatorio-item').each(function() {
+            recordatorios.push({
+                cantidad: $(this).find('.r-cantidad').val(),
+                unidad: $(this).find('.r-unidad').val()
+            });
+        });
+        let fecha = $("#fecha").val();      
+        let inicio = $("#inicio").val();         
+        let fin = $("#fin").val();   
+        let inicioISO = moment(fecha + "T" + inicio).format("YYYY-MM-DDTHH:mm:ss");
+        let finISO = moment(fecha + "T" + fin).format("YYYY-MM-DDTHH:mm:ss");
+        // Construir el payload JSON
+        const payload = {
+            titulo: $('#titulo').val(),
+            inicio: inicioISO,
+            fin: finISO || null,
+            descripcion: $('#descripcion').val(),
+            ot: $('#ot').val(),
+            participantes: $('#participantes').val(),
+            recordatorios: recordatorios
+        };
+        $.ajax({
+            url: '../api/eventos/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(response) {
+                alert('Evento creado con éxito!');
+                 $("#mdl").modal("hide");
+                calendar.refetchEvents();
+                $('#form-evento')[0].reset();
+                $('#recordatorios-container').empty();
+                $("#participantes").val(null).trigger('change');
+            },
+            error: function(xhr) {
+                console.error(xhr.responseText);
+                alert('Error al crear el evento. Revisa la consola.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

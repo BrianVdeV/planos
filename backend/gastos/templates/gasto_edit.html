@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Editar Reporte{% endblock title %}
+
+{% block vendor_css %}
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css"/>
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box d-flex justify-content-between align-items-center">
+      <h4 class="page-title">Editar Gastos</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <form method="POST" action="{% url 'actualizar_gasto' %}">
+        {% csrf_token %}
+        
+        <input type="hidden" name="id_reporte" value="{{ reporte.id }}">
+
+          <div class="row">
+            <div class="col-lg-8" id="gastos-list-container">
+              
+              {% for gasto in gastos %}
+              <div class="gasto-item card mb-2"> <div class="card-body">
+                  <div class="card-widgets">
+                    <a href="javascript:void(0);" class="delete-row"><i class="mdi mdi-close"></i></a>
+                  </div>
+                  <h5 class="card-title mb-0 gasto-numero">Gasto {{ forloop.counter }}</h5>
+                  
+                  <input type="hidden" name="gasto_id[]" value="{{ gasto.id }}">
+                  <input type="hidden" name="eliminar_fila[]" value="0" class="eliminar-fila">
+                  <input type="hidden" name="fechaGasto[]" value="{{ gasto.fecha|date:'Y-m-d' }}">
+
+                  <div class="row gx-2">
+                    <div class="col-md-6 mb-md-0 mb-2">
+                      <label class="form-label">OT</label>
+                      <select name="sltOT[]" class="form-select mb-2">
+                        <option value="">OT (Opcional)</option>
+                        {% for ot in ots %}
+                        <option value="{{ ot.id }}" {% if gasto.ot_id == ot.id %}selected{% endif %}>{{ ot }}</option>
+                        {% endfor %}
+                      </select>
+                      <textarea class="form-control" name="txtDescripcion[]" rows="2" placeholder="Ej: Moto de Oficina a SUNARP">{{ gasto.descripcion }}</textarea>
+                    </div>
+                    <div class="col-md-4 mb-md-0 mb-2">
+                      <label class="form-label">Categoría</label>
+                      <select class="form-select mb-2" name="sltCategoria[]">
+                        <option value="Firma" {% if gasto.categoria == "Firma" %}selected{% endif %}>Firma</option>
+                        <option value="Movilidad" {% if gasto.categoria == "Movilidad" %}selected{% endif %}>Movilidad</option>
+                        <option value="Municipalidad" {% if gasto.categoria == "Municipalidad" %}selected{% endif %}>Municipalidad</option>
+                        <option value="Notaria" {% if gasto.categoria == "Notaria" %}selected{% endif %}>Notaría</option>
+                        <option value="Oficina" {% if gasto.categoria == "Oficina" %}selected{% endif %}>Oficina</option>
+                        <option value="Sunarp" {% if gasto.categoria == "Sunarp" %}selected{% endif %}>Sunarp</option>
+                        <option value="Taxi" {% if gasto.categoria == "Taxi" %}selected{% endif %}>Taxi</option>
+                        <option value="Otros" {% if gasto.categoria == "Otros" %}selected{% endif %}>Otros</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2 mb-md-0 mb-2">
+                      <label class="form-label">Monto (S/)</label>
+                      <input type="number" class="form-control monto" name="txtMonto[]" step="0.01" placeholder="0.00" value="{{ gasto.monto|stringformat:'.2f' }}" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+              
+              <div class="text-end mt-2" id="add-row-container">
+                <button type="button" id="addRow" class="btn btn-link fw-semibold">
+                  <i class="ri-add-circle-line me-1"></i> Agregar Otro Gasto
+                </button>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="border p-3 mt-4 mt-lg-0 rounded bg-white"> 
+                <h4 class="header-title mb-3">Reporte de Gastos</h4>
+                <div class="table-responsive">
+                  <table class="table mb-0">
+                    <tbody>
+                      <tr>
+                        <td>Fecha del Gasto:</td>
+                        <td>
+                          <input type="date" class="form-control" id="fechaGeneral" name="fechaGeneral" value="{{ reporte.fecha|date:'Y-m-d' }}" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Saldo disponible:</td>
+                        <td>
+                          <input type="number" class="form-control" name="montoRecibido" id="saldoInicial" step="0.01" value="{{ reporte.monto_recibido|stringformat:'.2f' }}" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Total:</td>
+                        <td>
+                          <input type="text" readonly class="form-control-plaintext" id="totalMonto" value="{{ reporte.total }}" />
+                          <input type="hidden" name="totalMonto" id="totalMontoInput" value="{{ reporte.total }}">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Vuelto:</th>
+                        <th>
+                          <input type="text" readonly class="form-control-plaintext" id="diferenciaMonto" value="{{ reporte.vuelto }}" />
+                          <input type="hidden" name="diferenciaMonto" id="diferenciaMontoInput" value="{{ reporte.vuelto }}">
+                        </th>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="text-sm-end mb-2"> 
+                  <button type="submit" class="btn btn-primary w-100" id="btnGuardarGastos">
+                    <i class="mdi mdi-content-save-edit me-1"></i> Actualizar Gastos
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="template-clonar" style="display:none;">
+    <div class="gasto-item card mb-2">
+        <div class="card-body">
+            <div class="card-widgets">
+                <a href="javascript:void(0);" class="delete-row"><i class="mdi mdi-close"></i></a>
+            </div>
+            <h5 class="card-title mb-0 gasto-numero">Nuevo Gasto</h5>
+            
+            <input type="hidden" name="gasto_id[]" value=""> 
+            <input type="hidden" name="eliminar_fila[]" value="0" class="eliminar-fila">
+            <input type="hidden" name="fechaGasto[]" value=""> 
+
+            <div class="row gx-2">
+                <div class="col-md-6 mb-md-0 mb-2">
+                    <label class="form-label">OT</label>
+                    <select name="sltOT[]" class="form-select mb-2">
+                        <option value="">OT (Opcional)</option>
+                        {% for ot in ots %}
+                        <option value="{{ ot.id }}">{{ ot }}</option>
+                        {% endfor %}
+                    </select>
+                    <textarea class="form-control" name="txtDescripcion[]" rows="2" placeholder="Ej: Moto de Oficina a SUNARP"></textarea>
+                </div>
+                <div class="col-md-4 mb-md-0 mb-2">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-select mb-2" name="sltCategoria[]">
+                        <option value="Firma">Firma</option>
+                        <option value="Movilidad">Movilidad</option>
+                        <option value="Municipalidad">Municipalidad</option>
+                        <option value="Notaria">Notaría</option>
+                        <option value="Oficina">Oficina</option>
+                        <option value="Sunarp">Sunarp</option>
+                        <option value="Taxi">Taxi</option>
+                        <option value="Otros" selected>Otros</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-md-0 mb-2">
+                    <label class="form-label">Monto (S/)</label>
+                    <input type="number" class="form-control monto" name="txtMonto[]" step="0.01" placeholder="0.00" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'js/pages/gastos.js' %}"></script>
+<script>
+  // --- LÓGICA DE JAVASCRIPT CORREGIDA PARA EDITAR ---
+
+  function actualizarNumerosDeGasto() {
+    let contador = 1;
+    // Solo contamos los visibles
+    $('#gastos-list-container .gasto-item:visible').each(function() {
+      $(this).find('.gasto-numero').text(contador);
+      contador++;
+    });
+  }
+  
+  function calcularTotal() {
+    let total = 0;
+    // Sumamos solo visibles
+    $(".gasto-item:visible input[name='txtMonto[]']").each(function () {
+        let monto = parseFloat($(this).val()) || 0;
+        total += monto;
+    });
+
+    // Actualizamos inputs visibles y ocultos
+    $("#totalMonto").val(total.toFixed(2));
+    $("#totalMontoInput").val(total.toFixed(2));
+    
+    let saldoInicial = parseFloat($("#saldoInicial").val()) || 0;
+    let diferencia = saldoInicial - total;
+    
+    $("#diferenciaMonto").val(diferencia.toFixed(2));
+    $("#diferenciaMontoInput").val(diferencia.toFixed(2));
+    
+    // Color visual (Opcional)
+    if(diferencia < 0) $("#diferenciaMonto").addClass('text-danger');
+    else $("#diferenciaMonto").removeClass('text-danger');
+  }
+
+  $(document).ready(function () {
+    // Calcular al cargar
+    calcularTotal();
+    actualizarNumerosDeGasto();
+
+    // 1. CLONAR (Usando el template oculto para evitar errores de valores copiados)
+    $("#addRow").click(function () {
+      let nuevaFila = $("#template-clonar").children().first().clone();
+      
+      $("#add-row-container").before(nuevaFila); 
+      nuevaFila.find('select[name="sltOT[]"]').focus();
+      
+      actualizarNumerosDeGasto();
+    });
+
+    // 2. ELIMINAR (Lógica especial para EDITAR)
+    $(document).on("click", ".delete-row", function () {
+        let card = $(this).closest(".gasto-item");
+        let inputID = card.find("input[name='gasto_id[]']").val();
+        
+        // Contar visibles
+        let visibles = $(".gasto-item:visible").length;
+
+        if (visibles > 0) { // Permitimos borrar visualmente, validamos al final si quieres
+            if (inputID) {
+                // SI TIENE ID: Es un registro de BD. Lo ocultamos y marcamos para borrar.
+                card.hide();
+                card.find(".eliminar-fila").val("1");
+            } else {
+                // NO TIENE ID: Es nuevo (JS). Lo borramos del DOM.
+                card.remove();
+            }
+            calcularTotal();
+            actualizarNumerosDeGasto();
+        } else {
+            alert("No hay más gastos visibles.");
+        }
+    });
+
+    $(document).on("input", "input[name='txtMonto[]']", calcularTotal);
+    $(document).on("input", "#saldoInicial", calcularTotal);
+  });
+</script>
+{% endblock %}

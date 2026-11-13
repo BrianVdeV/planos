@@ -1,0 +1,24 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+  <div class="offcanvas-body">
+    <div class="mb-3">
+      <label for="simpleinput" class="form-label">Estado</label>
+      <select name="estado" class="form-select" id="estado_filter">
+        <option value="">Todos</option>
+        <option value="Activo" selected>Activo</option>
+        <option value="Finalizado">Finalizado</option>
+        <option value="Suspendido">Suspendido</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="simpleinput" class="form-label">Etiquetas</label>
+      <select name="etiquetas" class="form-select" id="etiquetas_filter">
+        <option value="">Todas</option>
+        {% for etiqueta in etiquetas %}
+        <option value="{{ etiqueta }}">{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button id="btnAplicarFiltro" class="btn btn-primary">Aplicar filtros</button>
+    <button id="btnLimpiarFiltro" class="btn btn-outline-secondary">Limpiar filtros</button>
+  </div>
+</div>

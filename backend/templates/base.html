@@ -1,0 +1,293 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>{% block title %}{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta content="A fully featured admin theme which can be used to build CRM, CMS, etc." name="description" />
+    <meta content="Coderthemes" name="author" />
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico'%}" />
+
+    <!-- Plugin css -->
+    <link rel="stylesheet" href="{% static 'vendor/daterangepicker/daterangepicker.css'%}" />
+    <link rel="stylesheet" href="{% static "vendor/jquery-toast-plugin/jquery.toast.min.css" %}">
+    <!-- Select2 css -->
+    <link href="{% static "vendor/select2/css/select2.min.css" %}" rel="stylesheet" type="text/css" />
+
+    <!-- Datatables css -->
+    <link href="{% static "vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+    <link href="{% static "vendor/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+    <link href="{% static "vendor/datatables.net-fixedcolumns-bs5/css/fixedColumns.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+    <link href="{% static "vendor/datatables.net-fixedheader-bs5/css/fixedHeader.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+    <link href="{% static "vendor/datatables.net-buttons-bs5/css/buttons.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+    <link href="{% static "vendor/datatables.net-select-bs5/css/select.bootstrap5.min.css" %}" rel="stylesheet" type="text/css" />
+
+    {% block vendor_css %}{% endblock vendor_css %}
+    <!-- Theme Config Js -->
+    <script src="{% static 'js/hyper-config.js'%}"></script>
+
+    <link href="{% static 'css/vendor.min.css' %}" rel="stylesheet" type="text/css" />
+    <!-- App css -->
+    <link href="{% static 'css/app-saas.css' %}" rel="stylesheet" type="text/css" id="app-style" />
+    <link href="{% static 'css/estilos.css' %}" rel="stylesheet" type="text/css" />
+
+    <!-- Icons css -->
+    <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
+  </head>
+
+  <body>
+    <!-- Begin page -->
+    <div class="wrapper">
+      <!-- ========== Topbar Start ========== -->
+      {% include 'layout/topbar.html' %}
+      <!-- ========== Topbar End ========== -->
+
+      <!-- ========== Left Sidebar Start ========== -->
+
+      {% include 'layout/sidebar.html' %}
+      <!-- ========== Left Sidebar End ========== -->
+      <!-- ============================================================== -->
+      <!-- Start Page Content here -->
+      <!-- ============================================================== -->
+
+      <div class="content-page">
+        <div class="content">
+          <!-- Start Content-->
+          <div class="container-fluid">
+            {% block content %}
+            <!-- Aquí va el contenido de cada página -->
+            {% endblock content %}
+            <!-- end page title -->
+          </div>
+          <!-- container -->
+        </div>
+        <!-- content -->
+
+        <!-- Footer Start -->
+        <footer class="footer">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-md-6">
+                <script>
+                  document.write(new Date().getFullYear());
+                </script>
+                © Planos Perú
+              </div>
+              <div class="col-md-6">
+                <div class="text-md-end footer-links d-none d-md-block">
+                  <a href="javascript: void(0);">Acerca</a>
+                  <a href="javascript: void(0);">Soporte</a>
+                  <a href="javascript: void(0);">Contacto</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+    {% include 'layout/theme.html' %}
+
+    <script src="{% static 'js/vendor.min.js'%}"></script>
+    <script src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-bs5/js/dataTables.bootstrap5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-responsive/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-responsive-bs5/js/responsive.bootstrap5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-fixedcolumns-bs5/js/fixedColumns.bootstrap5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-fixedheader/js/dataTables.fixedHeader.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-buttons/js/dataTables.buttons.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-buttons-bs5/js/buttons.bootstrap5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-buttons/js/buttons.html5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-buttons/js/buttons.flash.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-buttons/js/buttons.print.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables.net-keytable/js/dataTables.keyTable.min.js'%}"></script>
+    <script src="{% static 'vendor/datatables.net-select/js/dataTables.select.min.js'%}"></script>
+    
+    <script src="{% static 'vendor/jquery-toast-plugin/jquery.toast.min.js' %}"></script>
+    <script src="{% static 'js/pages/demo.toastr.js'%}"></script>
+    <script src="{% static 'vendor/jquery-mask-plugin/jquery.mask.min.js' %}"></script>
+    <script src="{% static 'vendor/chart.js/chart.min.js' %}"></script>
+    <script src="{% static 'vendor/moment/moment.js' %}"></script>
+    <script src="{% static 'vendor/moment/locale/es.js' %}"></script>
+    {% block vendor_js %} {% endblock vendor_js %}
+    <script src="{% static 'js/app.min.js'%}"></script>
+    <script src="{% static 'js/scripts.js' %}"></script>
+    {% block page_js %} {% endblock page_js %}
+    <script>
+      $(document).ready(function () {
+        $.ajax({
+          url: "{% url 'sidebar' %}",
+          type: "get",
+          dataType: "json",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+          },
+          success: function (data) {
+            const mapaBadges = {
+                "badge-agenda": data.agenda,
+                "pending-expenses": data.pending,
+                "rejected_expenses": data.rejected
+            };
+
+            // Recorremos el mapa para actualizar el DOM
+            $.each(mapaBadges, function (id, valor) {
+                const $badge = $("#" + id);
+                
+                if ($badge.length) {
+                    if (valor > 0) {
+                        $badge.text(valor).show().css("display", "inline-block");
+                    } else {
+                        $badge.hide();
+                    }
+                }
+            });
+          }
+        });
+
+        $.ajax({
+          url: "{% url "notificaciones-toast" %}",  // Ajusta la URL según tu configuración
+          type: "GET",
+          dataType: "json",
+          success: function (response) {
+              if (response.length > 0) {
+                  response.forEach(notificacion => {
+                      jqueryToast(notificacion.titulo, notificacion.descripcion, "warning");
+                  });
+              }
+          },
+          error: function (xhr, status, error) {
+              console.error("Error al cargar notificaciones:", error);
+          }
+        });
+        {% if messages %}
+          {% for message in messages %}
+            {% if message.tags == "success" %}
+              jqueryToast("¡Bien hecho!","{{ message }}","success");
+              {% elif message.tags == "error" %}
+              $.NotificationApp.send("Error","{{ message }}","bottom-right","rgba(0,0,0,0.2)","error");
+            {% endif %}
+          {% endfor %}
+        {% endif %}        
+      });
+    </script>
+    <script>
+        function initSearch() {
+            var $modalInput = $("#modal-search-input");
+            var $resultsContainer = $("#search-results");
+            var $modal = $("#centermodal");
+
+            var searchTimeout = null; 
+            var currentRequest = null; 
+
+            $modal.on('shown.bs.modal', function () {
+                $modalInput.focus();
+            });
+
+            $modal.on('hidden.bs.modal', function () {
+                $modalInput.val('');
+                $resultsContainer.html('<div class="p-3 text-center"><p class="text-muted mb-0">Escribe para comenzar a buscar...</p></div>');
+            });
+
+            $modalInput.on("input", function () {
+                var query = $modalInput.val().trim();
+
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    $resultsContainer.html('<div class="p-3 text-center"><p class="text-muted mb-0">Escribe para comenzar a buscar...</p></div>');
+                    return;
+                }
+
+                $resultsContainer.html('<div class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Buscando...</div>');
+
+                searchTimeout = setTimeout(function() {
+                    
+                    if (currentRequest != null) {
+                        currentRequest.abort();
+                    }
+
+                    currentRequest = $.ajax({
+                        url: `{% url "ots-list" %}?search=${encodeURIComponent(query)}&page_size=10`, 
+                        method: "GET",
+                        success: function (response) {
+                            $resultsContainer.empty();
+                            var resultados = response.results || response;
+                            var totalCount = response.count || resultados.length;
+
+                            if (resultados.length === 0) {
+                                $resultsContainer.html(`
+                                    <div class="text-center p-3">
+                                        <h5 class="text-muted mb-0">No se encontraron resultados para "${query}"</h5>
+                                    </div>
+                                `);
+                            } else {
+                                var limit = 10;
+                                var itemsToShow = resultados.slice(0, limit); 
+                                
+                                var htmlContent = `
+                                    <div class="sticky-top bg-white border-bottom p-2 ps-3">
+                                        <h5 class="font-14 mb-0">
+                                            Encontrados <span class="text-danger">${totalCount}</span> resultados 
+                                            ${totalCount > limit ? '<small class="text-muted ms-1">(Top 10)</small>' : ''}
+                                        </h5>
+                                    </div>
+                                    <div class="list-group list-group-flush">
+                                `;
+
+                                $.each(itemsToShow, function (i, ot) {
+                                    let titulo = ot.id_str || "Sin ID";
+                                    let id = ot.id || "#";
+
+                                    htmlContent += `
+                                        <a href="{% url "proyectos" %}${id}" class="list-group-item list-group-item-action border-0 border-bottom">
+                                            <div class="d-flex align-items-center">
+                                                <div class="flex-shrink-0 me-2">
+                                                    <i class="uil-file-alt font-20 text-primary"></i>
+                                                </div>
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <h5 class="font-14 mt-0 mb-1 text-truncate">${titulo}</h5>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    `;
+                                });
+
+                                htmlContent += `</div>`;
+                                
+                                if(totalCount > limit){
+                                    htmlContent += `
+                                        <div class="text-center p-2 bg-light">
+                                            <small class="text-muted">Sé más específico para ver el resultado exacto.</small>
+                                        </div>
+                                    `;
+                                }
+
+                                $resultsContainer.html(htmlContent);
+                            }
+                        },
+                        error: function (xhr) {
+                            if (xhr.statusText !== 'abort') {
+                                $resultsContainer.html(`
+                                    <div class="text-center p-3">
+                                        <h5 class="text-danger mb-0">Error al buscar</h5>
+                                    </div>
+                                `);
+                            }
+                        },
+                        complete: function() {
+                            currentRequest = null;
+                        }
+                    });
+
+                }, 300); 
+            });
+        }
+
+        $(document).ready(function () {
+            initSearch();
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,407 @@
+{% extends 'base.html' %} {% load static %} {% block title %}Dashboard{% endblock title %} {% block vendor_css %}
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" type="text/css" />
+{% endblock vendor_css %} {% block vendor_js %}
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock vendor_js %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Tablero de Control</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6 col-xl-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="float-end mt-2">
+          <i class="mdi mdi-alert-circle-outline widget-icon bg-danger-lighten text-danger"></i>
+        </div>
+        <h4 class="header-title mt-0 mb-3">Observados</h4>
+        <h3 class="fw-normal mt-0">
+          {{ total_observados }} {% if total_proximos > 0 %}
+          <small class="text-danger font-14 fw-bold ms-2">({{ total_proximos }} Próximos)</small>
+          {% endif %}
+        </h3>
+        <p class="text-muted mb-0">Expedientes Sunarp</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="float-end mt-2">
+          <i class="mdi mdi-clipboard-text-clock-outline widget-icon bg-warning-lighten text-warning"></i>
+        </div>
+        <h4 class="header-title mt-0 mb-3">Apelados</h4>
+        <h3 class="fw-normal mt-0">{{ apelados.count }}</h3>
+        <p class="text-muted mb-0">Expedientes Apelados</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="float-end mt-2">
+          <i class="mdi mdi-calendar-month widget-icon bg-info-lighten text-info"></i>
+        </div>
+        <h4 class="header-title mt-0 mb-3">Agenda (7 Días)</h4>
+        <h3 class="fw-normal mt-0">{{ eventos_hoy|length }}</h3>
+        <p class="text-muted mb-0">Eventos programados</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="float-end mt-2">
+          <i class="mdi mdi-rocket-launch widget-icon bg-success-lighten text-success"></i>
+        </div>
+
+        <h4 class="header-title mt-0 mb-2">Acciones Rápidas</h4>
+
+        <div class="d-grid mb-2">
+          <a href="{% url 'index' %}" class="btn btn-primary shadow-sm"> <i class="mdi mdi-play-circle-outline font-16 me-1"></i> Registrar Actividad </a>
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'expedientes' %}" class="btn btn-sm btn-outline-primary w-100" title="Ver Expedientes"> Sunarp </a>
+          <a href="{% url 'calendario' %}" class="btn btn-sm btn-outline-info w-100" title="Ver Agenda"> Calendario </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-xl-4 col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="header-title text-danger"><i class="mdi mdi-fire"></i> Próximos a Vencer (14 días)</h4>
+      </div>
+      <div class="card-body" data-simplebar style="max-height: 400px">
+        <div class="table-responsive">
+          <table class="table table-sm table-centered table-nowrap table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>OT</th>
+                <th>Expediente</th>
+                <th>Vence</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exp in lista_urgentes %}
+              <tr>
+                <td><span class="fw-bold" data-bs-toggle="tooltip" data-bs-title="{{ exp.ot}}">{{ exp.ot.id}}</span></td>
+                <td>{{ exp }}</td>
+                <td>
+                  {% if exp.reingreso %}
+                  <span class="badge badge-warning-lighten"> {{ exp.reingreso|date:"d/m" }} </span>
+                  {% elif exp.vencimiento %}
+                  <span class="badge badge-danger-lighten"> {{ exp.vencimiento|date:"d/m" }} </span>
+                  {% endif %}
+                </td>
+                <td>{{ exp.estado }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center p-3 text-muted">Sin vencimientos próximos</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4 col-lg-6">
+      <div class="card">
+          <div class="d-flex card-header justify-content-between align-items-center">
+              <h4 class="header-title">Apelados</h4>
+          </div>
+          <div class="card-body pt-0">
+              <div class="table-responsive">
+                  <table class="table table-sm table-centered mb-0 font-14">
+                      <thead class="bg-light bg-opacity-50">
+                          <tr>
+                              <th>OT</th>
+                              <th>Expediente</th>
+                              <th>Presentación</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for ap in apelados %}
+                          <tr>
+                              <td><span class="fw-bold">{{ ap.ot}}</span></td>
+                              <td>{{ ap }}</td>
+                              <td>{{ ap.presentacion | date:"d/m/y" }}</td>
+                          </tr>
+                          {% empty %}
+                          <tr>
+                              <td class="text-center p-3 text-muted">No hay expedientes apelados</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div> <!-- end table-responsive-->
+          </div> <!-- end card-body-->
+      </div> <!-- end card-->
+  </div>
+  <div class="col-xl-4 col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="dropdown float-end">
+          <a href="#" class="dropdown-toggle arrow-none card-drop" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="mdi mdi-dots-vertical"></i>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a href="javascript:location.reload();" class="dropdown-item">Actualizar</a>
+          </div>
+        </div>
+        <h4 class="header-title mb-3"><i class="mdi mdi-robot"></i> Actividad Reciente</h4>
+
+        <div class="inbox-widget" style="max-height: 350px; overflow-y: auto">
+          {% for h in historial_robot %}
+          <div class="inbox-item border-bottom pb-2 mb-2">
+            <div class="inbox-item-img bg-light text-primary rounded-circle text-center" style="width: 35px; height: 35px; line-height: 35px">
+              <i class="mdi mdi-swap-horizontal-bold"></i>
+            </div>
+
+            <p class="inbox-item-author mb-0 font-14 text-truncate" title="{{ h.expediente.ot.nombre }}">{{ h.expediente.ot.id }} - {{ h.expediente.ot.nombre|default:"Sin Nombre" }}</p>
+
+            <p class="inbox-item-text mb-0">Exp: <strong>{{ h.expediente }}</strong></p>
+
+            <p class="inbox-item-text mt-1">
+              Cambió a: {% if "Tachado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: black; text-decoration: line-through">{{ h.estado_nuevo }}</span>
+              {% elif "Tribunal" in h.estado_nuevo or "Improcedente" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: black">{{ h.estado_nuevo }}</span>
+
+              {% elif "Inscrito" in h.estado_nuevo or "Finalizado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #89be21"><i class="mdi mdi-check-circle"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Liquidado" in h.estado_nuevo or "Procedente" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #006633"><i class="mdi mdi-cash-check"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "calificación" in h.estado_nuevo or "calificacion" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #5a2071"><i class="mdi mdi-magnify"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Observado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: red"><i class="mdi mdi-alert-circle"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Suspendido" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #981622"><i class="mdi mdi-pause-circle"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Apelado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #ef8e00"><i class="mdi mdi-gavel"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Reingresado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #1d58b4"><i class="mdi mdi-refresh"></i> {{ h.estado_nuevo }}</span>
+
+              {% elif "Presentado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #00a7a4">{{ h.estado_nuevo }}</span>
+
+              {% elif "Anotado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #7eb3d5">{{ h.estado_nuevo }}</span>
+              {% elif "Prorrogado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #80d0ff">{{ h.estado_nuevo }}</span>
+
+              {% elif "Distribuido" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #f31c53">{{ h.estado_nuevo }}</span>
+
+              {% elif "Reservado" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #575756">{{ h.estado_nuevo }}</span>
+              {% elif "proceso" in h.estado_nuevo %}
+              <span class="fw-bold" style="color: #b4b4b4">{{ h.estado_nuevo }}</span>
+
+              {% else %}
+              <span class="text-primary fw-bold">{{ h.estado_nuevo }}</span>
+              {% endif %}
+            </p>
+
+            <p class="inbox-item-date text-muted font-11">{{ h.fecha_hora|date:"d/m H:i" }}</p>
+          </div>
+          {% empty %}
+          <div class="text-center mt-4">
+            <p class="text-muted">No hay cambios recientes registrados.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h4 class="header-title mb-3">Proximos Eventos</h4>
+        <div class="inbox-widget" style="max-height: 350px; overflow-y: auto">
+          {% for evento in eventos_hoy %}
+          <div class="inbox-item">
+            <div class="inbox-item-img bg-info-lighten text-info rounded-circle text-center" style="width: 40px; height: 40px; line-height: 40px">
+              <i class="mdi mdi-calendar-clock"></i>
+            </div>
+            <p class="inbox-item-author"><span class="badge bg-info-lighten text-info">{{ evento.ot }}</span>{{ evento.titulo }} </p>
+            <p class="inbox-item-text">{{ evento.inicio }}</p>
+          </div>
+          {% empty %}
+          <div class="text-center mt-4 text-muted">Sin eventos hoy.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xl-9">
+    <div class="card">
+      <div class="d-flex card-header justify-content-between align-items-center">
+        <h4 class="header-title">OTs Creadas por Mes</h4>
+        <select id="yearFilter" class="form-select form-select-sm w-auto">
+          <option value="2026" selected>2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="card-body">
+        <div style="height: 350px;">
+          <canvas id="otsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3">
+    <!-- dashboard.html -->
+    <div class="card">
+        <div class="card-body">
+          <h4 class="header-title mb-3">Últimas OTs Creadas</h4>
+            <table class="table table-sm table-centered table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>OT</th>
+                        <th>Inicio</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-ots-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="float-end mt-2">
+          <i class="mdi mdi-briefcase-outline widget-icon bg-primary-lighten text-primary"></i>
+        </div>
+        <h4 class="header-title mt-0 mb-3">Promedio mensual:</h4>
+        <h3 class="fw-normal mt-0" id="promedioMensualVal">0</h3>
+        <p class="text-muted mb-0">OTs/mes</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_js %}
+<script>
+  let otsChartInstance = null;
+  function cargarGrafico(year) {
+    $.ajax({
+        url: "/api/ots/histograma_mensual/",
+        type: "GET",
+        data: { year: year },
+        success: function (data) {
+            $('#promedioMensualVal').text(data.promedio_mensual);
+
+            if (otsChartInstance !== null) {
+                otsChartInstance.destroy();
+            }
+
+            const ctx = document.getElementById("otsChart").getContext("2d");
+            otsChartInstance = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: data.labels,
+                    datasets: data.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 },
+                            grid: { color: "rgba(0,0,0,0)" }
+                        }
+                    },
+                    plugins: { legend: false }
+                }
+            });
+        },
+        error: function (xhr) {
+            console.error("Error al cargar histograma y promedio:", xhr);
+            $('#promedioMensualVal').text("-");
+        }
+    });
+  }
+
+  function cargarUltimasOTs() {
+      $.get('/api/ots/recientes/', function(data) {
+          const tbody = $('#tabla-ots-body');
+          tbody.empty(); // Limpiamos el "Cargando..."
+
+          // Si no hay datos
+          if (data.length === 0) {
+              tbody.append('<tr><td colspan="2" class="text-center text-muted">No hay OTs recientes</td></tr>');
+              return;
+          }
+
+          // Recorremos los datos y construimos las filas
+          data.forEach(function(ot) {
+              // Generar "hace x días/horas" usando Moment.js
+              let tiempoRelativo = '-';
+              if (ot.inicio) {
+                  tiempoRelativo = moment(ot.inicio).fromNow(); 
+              }
+
+              // Inyectar el HTML en la tabla (agregué un tooltip title para ver la fecha exacta al pasar el mouse)
+              const fila = `
+                  <tr>
+                      <td><span class="text-muted fw-bold">${ot.id_str}</span></td>
+                      <td>
+                          <span title="${moment(ot.inicio).format('DD/MM/YYYY HH:mm')}">
+                              ${tiempoRelativo}
+                          </span>
+                      </td>
+                  </tr>
+              `;
+              tbody.append(fila);
+          });
+      }).fail(function(xhr) {
+          $('#tabla-ots-body').html('<tr><td colspan="2" class="text-danger text-center">Error al cargar</td></tr>');
+          console.error("Error cargando OTs:", xhr.responseText);
+      });
+  }
+
+  $(document).ready(function () {
+    moment.locale('es');
+    cargarGrafico($('#yearFilter').val());
+
+    $('#yearFilter').on('change', function() {
+        let anioSeleccionado = $(this).val();
+        cargarGrafico(anioSeleccionado);
+    });
+
+    // 3. Ejecutar al cargar la página
+    cargarUltimasOTs();
+  });
+</script>
+{% endblock %}

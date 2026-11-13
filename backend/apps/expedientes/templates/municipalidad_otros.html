@@ -1,0 +1,238 @@
+{% extends 'base.html' %} {% load static %} 
+{% block title %}Municipalidad y Otros{% endblock %} 
+
+{% block vendor_js %}
+<script src="https://cdn.datatables.net/plug-ins/2.2.2/dataRender/datetime.js"></script>
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+{% endblock vendor_js %} 
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="page-title">Municipalidad y Otros</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <a data-bs-target="#mdlAddMuni" data-bs-toggle="modal" class="btn btn-primary rounded-pill">
+              <i class="mdi mdi-plus"></i> Crear expediente
+            </a>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-sm-end">
+              <button id="btnExport" class="btn btn-success mb-2" type="button">
+                <i class="mdi mdi-file-excel"></i> Exportar
+              </button>
+              <button id="btnFiltro" class="btn btn-outline-primary mb-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                <i class="mdi mdi-filter-variant"></i> Filtros
+                <span id="badgeFiltros" class="badge bg-light text-dark ms-1 d-none">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <table id="table-muni" class="table table-sm tb-hover dt-responsive w-100">
+          <thead>
+            <tr>
+              <th>OT</th>
+              <th>Entidad</th>
+              <th>Número</th>
+              <th>Estado</th>
+              <th>Presentación</th>
+              <th>Vencimiento</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include 'partials/_modals/modal_add_muni.html' %}
+{% include 'partials/_modals/modal_edit_muni.html' %}
+{% include 'partials/_offcanvas/filter_sunarp.html' %}
+{% endblock %} 
+
+{% block page_js %}
+<script>
+  $(document).ready(function () {
+    
+    var table = $("#table-muni").DataTable({
+      language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+      pageLength: 50,
+      serverSide: true,
+      processing: true,
+      order: [[5, 'desc']],
+      ajax: {
+        url: "../api/municipalidad/?format=datatables",
+        type: "GET",
+        data: function(d) {
+          d.estado = document.getElementById('estado_filter')?.value || '';
+          d.ot__estado = document.getElementById('ot_estado_filter')?.value || '';
+        },
+      },
+      columns: [
+        { data: "ot_str",name: "ot.id,ot.nombre" },
+        { data: "entidad" },
+        { data: "numero" },
+        { data: "estado" },
+        { data: "presentacion" },
+        { data: "vencimiento" },
+        { data: null },
+      ],
+      columnDefs: [
+        {
+          targets: -1,
+          data: null,
+          defaultContent: `
+            <div class="dropdown card-widgets">
+                <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="javascript:void(0);" class="dropdown-item edit"><i class="uil uil-edit me-1"></i>Editar</a>
+                    <a href="javascript:void(0);" class="dropdown-item text-danger delete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>
+                </div>
+            </div>`
+        },
+        { targets: [4, 5], render: DataTable.render.moment( 'DD/MM/YY' ) },
+      ],
+      createdRow: function (row, data, dataIndex) {
+        var estadoTexto = data.estado;
+        var colorHex = colorMapping[estadoTexto] || "#000000"; 
+        $('td', row).eq(3).css({
+            "color": colorHex,
+        });
+      },
+    });
+
+    function actualizarBadgeFiltros() {
+      let filtrosActivos = 0;
+      const estado = document.getElementById("estado_filter").value;
+      const ot_estado = document.getElementById("ot_estado_filter").value;
+      if (estado !== "") filtrosActivos++;
+      if (ot_estado !== "") filtrosActivos++;
+      const badge = document.getElementById("badgeFiltros");
+      const boton = document.getElementById("btnFiltro");
+      if (filtrosActivos > 0) {
+        badge.textContent = filtrosActivos;
+        badge.classList.remove("d-none");
+        boton.classList.remove("btn-outline-primary");
+        boton.classList.add("btn-primary");
+      } else {
+        badge.classList.add("d-none");
+        boton.classList.remove("btn-primary");
+        boton.classList.add("btn-outline-primary");
+      }
+    }
+    
+    actualizarBadgeFiltros();
+
+    document.getElementById("btnAplicarFiltro").addEventListener("click", function () {
+      actualizarBadgeFiltros();
+      table.page(0).ajax.reload(null, false);
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    document.getElementById("btnLimpiarFiltro").addEventListener("click", function () {
+      document.getElementById("estado_filter").value = "";
+      document.getElementById("ot_estado_filter").value = "";
+      actualizarBadgeFiltros();
+      table.page(0).ajax.reload(null, false);
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    
+    // 2. INICIALIZAR SELECT2 EN EL MODAL NUEVO
+    $('#mdlAddMuni').on('shown.bs.modal', function () {
+        $('select[name="ot"]').select2({
+            dropdownParent: $('#mdlAddMuni'),
+            width: '100%',
+            placeholder: "Buscar OT...",
+            allowClear: true
+        });
+    });
+
+  });
+
+  // LOGICA DE GUARDAR (NUEVO FORMULARIO)
+  $(document).on("submit", "#frmAddMuni", function (e) {
+    e.preventDefault();
+    $.ajax({
+      url: `../api/municipalidad/`, 
+      method: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: $(this).serialize(),
+      success: function (res) {
+        $("#mdlAddMuni").modal("hide");
+        $("#table-muni").DataTable().ajax.reload(null, false);
+        $.NotificationApp.send("¡Éxito!", "Expediente creado correctamente", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        
+        $("#frmAddMuni")[0].reset();
+        $('select[name="ot"]').val(null).trigger('change');
+      },
+      error: function (xhr) {
+        $.NotificationApp.send("¡Error!", xhr.responseText || "Error al guardar", "bottom-right", "rgba(0,0,0,0.2)", "error");
+      },
+    });
+  });
+  
+  // EDITAR
+  $(document).on("click", ".edit", function () {
+    const id = $(this).closest("tr").attr("id");
+    $("#frmEdit").attr("data-id", id);
+    $.get(`../api/municipalidad/${id}/`, function (data) {
+      $('select[name="estado"]').val(data.estado);
+      $('select[name="entidad"]').val(data.entidad);
+      $('input[name="numero"]').val(data.numero);
+      if(data.presentacion) $('input[name="presentacion"]').val(moment(data.presentacion).format("YYYY-MM-DD"));
+      if(data.vencimiento) $('input[name="vencimiento"]').val(moment(data.vencimiento).format("YYYY-MM-DD"));
+    });
+    $("#mdlEdit").modal("show");
+  });
+
+  $(document).on("submit", "#frmEdit", function (e) {
+    e.preventDefault();
+    const expedienteId = $(this).attr("data-id");
+    $.ajax({
+      url: `../api/municipalidad/${expedienteId}/`,
+      method: "PATCH",
+      headers: { "X-CSRFToken": "{{ csrf_token }}" },
+      data: $(this).serialize(),
+      success: function (res) {
+        $("#mdlEdit").modal("hide");
+        $("#table-muni").DataTable().ajax.reload(null, false);
+        $.NotificationApp.send("¡Bien hecho!", "Expediente actualizado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+      },
+      error: function (xhr) {
+        $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+      },
+    });
+  });
+
+  $(document).on("click", ".delete", function (e) {
+    e.preventDefault();
+    const id = $(this).closest("tr").attr("id");
+    if (confirm("¿Confirma que desea eliminar este expediente?")){
+      $.ajax({
+        url: `../api/municipalidad/${id}/`, 
+        method: "DELETE",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+        success: function (response) {
+          $("#table-muni").DataTable().ajax.reload();
+          $.NotificationApp.send("¡Bien hecho!", "Expediente eliminado", "bottom-right", "rgba(0,0,0,0.2)", "success");
+        },
+        error: function (xhr) {
+          $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+        },
+      });
+    }
+  });
+</script>
+{% endblock %}

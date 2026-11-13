@@ -1,0 +1,59 @@
+<div class="modal fade" id="mdlUbicacion" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Añadir ubicación</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+      </div>
+      <form action="{% url 'mapa' %}" method="post" id="frmUbi">
+        {% csrf_token %}
+        <div class="modal-body">
+          <section class="courses-section">
+            <div class="row">
+              <div class="mb-3">
+                <label for="ot" class="form-label">OT</label>
+                <select class="form-select" name="ot" id="ot">
+                  <option>Seleccione OT</option>
+                  {% for ot in ots %}
+                  <option value="{{ ot.id }}">{{ ot }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="departamento" class="form-label">Departamento</label>
+                <select class="form-select" name="departamento" id="departamento">
+                  <option>Seleccione departamento</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="provincia" class="form-label">Provincia</label>
+                <select class="form-select" name="provincia" id="provincia"></select>
+              </div>
+              <div class="mb-3">
+                <label for="distrito" class="form-label">Distrito</label>
+                <select class="form-select" name="ubigeo" id="distrito"></select>
+              </div>
+              <div class="mb-3">
+                <label for="direccion" class="form-label">Dirección</label>
+                <input type="text" class="form-control" name="direccion" id="direccion" />
+              </div>
+              <div class="mb-3">
+                <label for="coordenadas" class="form-label">Coordenadas</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" name="coordenadas" id="coordenadas" placeholder="latitud, longitud" />
+                  <button type="button" class="btn btn-primary" id="btnGetLocation">
+                    <i class="uil-map-marker fs-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="submit" class="btn btn-primary">Añadir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

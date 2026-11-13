@@ -1,0 +1,289 @@
+{% extends 'base.html' %} {% block title %}Mapa{% endblock title %} {% block vendor_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-search/2.9.7/leaflet-search.min.css" />
+{% endblock %} {% block vendor_js %}
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-search@2.9.7/dist/leaflet-search.min.js"></script>
+{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <div class="page-title-right">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mdlUbicacion" id="btnUbicacion">Añadir ubicación</button>
+      </div>
+      <h4 class="page-title">Mapa</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <!-- Mapa -->
+        <div id="map" style="height: 88vh"></div>
+        <!-- Contenedor para el filtro de año -->
+        <div id="filtro-flotante" style="position: absolute; top: 160px; left: 35px; z-index: 999">
+          <div
+            style="
+              position: relative;
+              display: inline-block;
+              width: 33px;
+              height: 30px;
+              background-color: white;
+              border-radius: 5px;
+              padding: 0 5px;
+              cursor: pointer;
+              color: white;
+              text-align: center;
+              line-height: 30px;
+              box-shadow: 0 0 8px rgba(75, 75, 75, 0.7);
+            "
+          >
+            <!-- Ícono en lugar del texto -->
+            <select id="filtro-anio" style="width: 100%; height: 100%; opacity: 0; position: absolute; top: 0; left: 0; cursor: pointer">
+              <option value="" disabled selected>--</option>
+              <option value="2018">2018</option>
+              <option value="2019">2019</option>
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+            </select>
+
+            <!-- Ícono visible (FontAwesome, por ejemplo) -->
+            <i class="uil uil-filter" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: black"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/_modals/modal_add_ubicacion.html" %}
+{% endblock %} {% block page_js %}
+<script>
+  // Función para cargar los departamentos
+  function loadDepartamento() {
+    $.get("{% url 'ubigeo-list' %}departamentos/", function (data) {
+      var departamentos = data;
+      $("#departamento").html("<option>Seleccione departamento</option>");
+      departamentos.forEach(function (departamento) {
+        $("#departamento").append(new Option(departamento, departamento));
+      });
+    });
+  }
+
+  // Función para cargar las provincias según el departamento
+  function loadProvincia(departamento) {
+    $.get("{% url 'ubigeo-list' %}provincias/?departamento=" + departamento, function (data) {
+      var provincias = data;
+      $("#provincia").html("<option>Seleccione provincia</option>");
+      provincias.forEach(function (provincia) {
+        $("#provincia").append(new Option(provincia, provincia));
+      });
+    });
+  }
+
+  // Función para cargar los distritos según la provincia
+  function loadDistrito(provincia) {
+    $.get("{% url 'ubigeo-list' %}?provincia=" + provincia, function (data) {
+      var ubigeos = data.results;
+      $("#distrito").html("<option>Seleccione distrito</option>");
+      ubigeos.forEach(function (ubigeo) {
+        $("#distrito").append(new Option(ubigeo.distrito,ubigeo.id));
+      });
+    });
+  }
+
+  $(document).ready(function () {
+    // Inicializa el select2 en el campo de OT
+    $("#ot").select2({
+      dropdownParent: $("#mdlUbicacion"),
+    });
+  });
+
+  loadDepartamento();
+
+  // Evento para cargar provincias cuando cambia el departamento
+  $("#departamento").on("change", function () {
+    var departamentoSeleccionado = $(this).val();
+    if (departamentoSeleccionado) {
+      loadProvincia(departamentoSeleccionado);
+    }
+  });
+
+  $("#provincia").on("change", function () {
+    var provinciaSeleccionado = $(this).val();
+    if (provinciaSeleccionado) {
+      loadDistrito(provinciaSeleccionado);
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var mymap = L.map("map").setView([-12.0307326, -77.0249346], 14); // Ajusta la latitud y longitud inicial según tu caso
+
+    // Cargar capa base de OpenStreetMap
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+    }).addTo(mymap);
+
+    // Variable para guardar la capa de geojson
+    var geojsonLayer;
+    var searchControl;
+
+    // Función para cargar los datos GeoJSON en el mapa
+    function addGeoJSONToMap(data) {
+      geojsonLayer = L.geoJSON(data, {
+        pointToLayer: function (feature, latlng) {
+          var marker = L.marker(latlng);
+          marker.bindPopup(
+            "<strong>OT:</strong> " +
+              feature.properties.ot +
+              "<br /><strong>Departamento:</strong> " +
+              feature.properties.departamento +
+              "<br /><strong>Provincia:</strong> " +
+              feature.properties.provincia +
+              "<br /><strong>Distrito:</strong> " +
+              feature.properties.distrito +
+              "<br /><strong>Dirección:</strong> " +
+              feature.properties.direccion
+          );
+          return marker;
+        },
+      }).addTo(mymap);
+
+      // Solo agregar el control de búsqueda si aún no está agregado
+      if (!searchControl) {
+        searchControl = new L.Control.Search({
+          layer: geojsonLayer,
+          propertyName: "id", // Buscar por OT (campo "id" del GeoJSON)
+          marker: false,
+          moveToLocation: function (latlng) {
+            mymap.setView(latlng, 16); // Zoom al hacer clic en el resultado
+          },
+        });
+        searchControl.addTo(mymap);
+        var button = document.querySelector(".search-button");
+        if (button) {
+          button.innerHTML = '<i class="uil uil-search-alt" style="font-size: 18px; color: black; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></i>';
+          button.style.display = "flex";
+          button.style.alignItems = "center";
+          button.style.justifyContent = "center";
+        }
+      }
+    }
+
+    // Función para cargar los datos originales en el mapa
+    function cargarDatosOriginales() {
+      fetch("{% url 'ubicacion-list' %}geojson/")
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (data) {
+          addGeoJSONToMap(data.features);
+        });
+    }
+
+    // Llamar a la función para cargar los datos originales en el mapa
+    cargarDatosOriginales();
+
+    // Función para aplicar el filtro por año cuando el usuario cambia el valor del <select>
+    document.getElementById("filtro-anio").addEventListener("change", function () {
+      var anioSeleccionado = document.getElementById("filtro-anio").value;
+
+      if (anioSeleccionado) {
+        fetch("{% url 'ubicacion-list' %}")
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            // Filtrar las OT según el año seleccionado
+            var filteredData = data.features.filter(function (feature) {
+              var anioOT = feature.properties.nac_ot; // Obtener el año de nac_ot
+              return anioOT === parseInt(anioSeleccionado); // Comparar con el año seleccionado
+            });
+
+            // Limpiar el mapa y añadir solo los elementos filtrados
+            mymap.removeLayer(geojsonLayer);
+
+            // Agregar los datos filtrados
+            addGeoJSONToMap({
+              type: "FeatureCollection",
+              features: filteredData,
+            });
+          });
+      } else {
+        // Si no se selecciona ningún año, mostrar todos los datos
+        mymap.removeLayer(geojsonLayer);
+        cargarDatosOriginales();
+      }
+    });
+
+    document.getElementById("btnGetLocation").addEventListener("click", function () {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            let lat = position.coords.latitude;
+            let lng = position.coords.longitude;
+
+            // Llenar coordenadas en el input
+            document.getElementById("coordenadas").value = lat + ", " + lng;
+
+            // Llamar a Nominatim para obtener la dirección
+            let url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+
+            fetch(url)
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.address) {
+                  console.log("Dirección obtenida:", data.address);
+
+                  let calle = data.address.road || data.address.pedestrian || data.address.footway;
+                  let numero = data.address.house_number;
+                  let distrito = data.address.suburb || data.address.city_district || data.address.city;
+                  let provincia = data.address.county || data.address.region || data.address.state_district;
+                  let departamento = data.address.state;
+
+                  // Filtrar los valores vacíos o "undefined"
+                  let partesDireccion = [calle, numero, distrito, provincia, departamento].filter(Boolean);
+                  document.getElementById("direccion").value = partesDireccion.join(", ");
+
+                  // Llenar departamento
+                  if (document.getElementById("departamento")) {
+                    document.getElementById("departamento").value = departamento;
+                    document.getElementById("departamento").dispatchEvent(new Event("change"));
+                  }
+
+                  // Esperar a que se carguen las provincias antes de asignar valor
+                  setTimeout(() => {
+                    if (document.getElementById("provincia")) {
+                      document.getElementById("provincia").value = provincia;
+                      document.getElementById("provincia").dispatchEvent(new Event("change"));
+                    }
+
+                    // Esperar a que se carguen los distritos antes de asignar valor
+                    setTimeout(() => {
+                      if (document.getElementById("distrito")) {
+                        document.getElementById("distrito").value = distrito;
+                      }
+                    }, 1000); // Espera 1 segundo después de cargar la provincia
+                  }, 1000); // Espera 1 segundo después de cargar el departamento
+                } else {
+                  alert("No se pudo obtener la dirección.");
+                }
+              })
+              .catch((error) => console.error("Error al obtener la dirección:", error));
+          },
+          function (error) {
+            alert("No se pudo obtener la ubicación. Asegúrate de permitir el acceso.");
+          }
+        );
+      } else {
+        alert("La geolocalización no está soportada en este navegador.");
+      }
+    });
+  });
+</script>
+{% endblock %}

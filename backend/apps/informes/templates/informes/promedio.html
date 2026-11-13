@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% block title %}Promedio de tareas{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Promedio de tareas</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Tarea</th>
+              <th>Promedio por OT (horas)</th>
+              <th>Cantidad OTs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resultados %}
+            <tr>
+              <td>{{ r.tarea }}</td>
+              <td>{{ r.promedio_horas }}</td>
+              <td>{{ r.num_ots }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3">No hay datos.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,746 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Aprobaciones de Gastos{% endblock title %}
+{% block content %} 
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Aprobaciones de Gastos</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <ul class="nav nav-tabs nav-bordered mb-3" id="gastosTabs">
+          <li class="nav-item">
+            <a class="nav-link active" id="caja-chica-tab" data-bs-toggle="tab" href="#caja_chica">Caja Chica</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="pendientes-tab" data-bs-toggle="tab" href="#pendientes">Pendientes</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="saldo-tab" data-bs-toggle="tab" href="#saldo">Saldo</a>
+          </li>
+        </ul>
+        <div class="tab-content mt-3">
+          <div class="tab-pane fade show active" id="caja_chica">
+            <div class="page-title-box" >
+              <div class="page-title-right">
+                <form class="d-flex">
+                  <div class="input-group" >
+                    <input type="text" class="form-control form-control-light" id="dash-daterange" />
+                    <span class="input-group-text bg-primary border-primary text-white">
+                      <i class="mdi mdi-calendar-range font-13"></i>
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="abrirModalBtn" style="margin-bottom: 20px">Registrar Caja Chica</button>
+            <table id="tablaCaja" class="table table-sm table-bordered border border-secondary w-100" style="color: black">
+              <thead class="table-dark">
+                <tr>
+                  <th>Fecha Gasto</th>
+                  <th>Usuario</th>
+                  <th>Total</th>
+                  <th></th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="tab-pane fade" id="pendientes">
+            <div class="d-flex justify-content-between align-items-center">
+              <form method="post">
+                {% csrf_token %}
+                <button class="btn btn-success" type="submit" name="accion" value="aprobar_todos" style="margin-bottom: 20px">
+                  <i class="uil uil-check-circle me-1"></i>
+                  Aprobar Todos
+                </button>
+              </form>
+            </div>
+
+            <table id="tabla_pendientes" class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Usuario</th>
+                  <th>Monto Recibido</th>
+                  <th>Total</th>
+                  <th>Diferencia</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reportegasto in pendientes %}
+                <tr>
+                  <td>{{ reportegasto.fecha|date:"d/m/Y" }}</td>
+                  <td>{{ reportegasto.usuario.username }}</td>
+                  <td>S/ {{ reportegasto.monto_recibido|floatformat:2 }}</td>
+                  <td>S/ {{ reportegasto.total|floatformat:2 }}</td>
+                  <td class="text-{% if reportegasto.vuelto >= 0 %}success{% else %}danger{% endif %}">
+                    S/ {{ reportegasto.vuelto|floatformat:2 }}
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-info btn-ver-recibo"
+                      data-reporte-id="{{ reportegasto.id }}"
+                      data-reporte-fecha="{{ reportegasto.fecha|date:'d/m/Y' }}"
+                      data-reporte-usuario="{{ reportegasto.usuario.username }}"
+                      data-reporte-monto-recibido="{{ reportegasto.monto_recibido }}"
+                      data-reporte-total="{{ reportegasto.total }}"
+                      data-reporte-vuelto="{{ reportegasto.vuelto }}"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalRecibo"
+                    >
+                      <i class="uil uil-receipt"></i>
+                    </button>
+                  </td>
+
+                  <td>
+                    <div class="dropdown card-widgets">
+                      <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="uil uil-ellipsis-h"></i>
+                      </a>
+                      <div class="dropdown-menu dropdown-menu-end">
+                        <form method="post">
+                          {% csrf_token %}
+                          <input type="hidden" name="gasto_id" value="{{ reportegasto.id }}" />
+                          <button class="dropdown-item text-success" type="submit" name="accion" value="aprobar">
+                            <i class="uil uil-check-circle me-1"></i>
+                            Aprobar
+                          </button>
+                          <button
+                            class="dropdown-item text-danger btn-rechazar"
+                            data-gasto-id="{{ reportegasto.id }}"
+                            data-gasto-usuario="{{ reportegasto.usuario.username }}"
+                            data-gasto-fecha="{{ reportegasto.fecha|date:'d/m/Y' }}"
+                          >
+                            <i class="uil uil-times-circle me-1"></i>
+                            Rechazar
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-pane fade" id="saldo">
+            <form id="frmSaldo" method="POST" class="row row-cols-lg-auto g-3 align-items-center">
+              {% csrf_token %}
+              <div class="col-12">
+                <label for="saldo" class="visually-hidden">Saldo</label>
+                <input type="number" name="saldo" class="form-control" id="txtSaldo" placeholder="Saldo" step="0.01" required />
+              </div>
+              <div class="col-12">
+                <select class="form-select" name="usuario_id" id="sltUsuario">
+                  {% for usuario in usuarios %}
+                  <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">Enviar Saldo</button>
+              </div>
+            </form>
+            <div class="row">
+              <table class="table dt-responsive nowrap w-100" id="tblSaldo">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Saldo</th>
+                    <th>Fecha</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="editarCajaModal" tabindex="-1" aria-labelledby="editarCajaModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editarCajaModalLabel">Editar Ingreso</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-editar-caja">
+          <input type="hidden" id="editar-id" name="id" />
+
+          <div class="mb-3">
+            <label for="editar-ingreso" class="form-label">Ingreso</label>
+            <input type="number" class="form-control" id="editar-ingreso" name="ingreso" step="0.01" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="modalRechazo" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Motivo de Rechazo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          <strong>Usuario:</strong>
+          <span id="modal-usuario">-</span>
+        </p>
+        <p>
+          <strong>Fecha:</strong>
+          <span id="modal-fecha">-</span>
+        </p>
+        <textarea id="mensajeRechazo" class="form-control" rows="4" placeholder="Escribe el motivo del rechazo"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button id="guardarMensaje" class="btn btn-danger">Rechazar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalRecibo" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"> <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Recibo de Gastos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body" id="recibo-content">
+        <p><strong>Fecha:</strong> <span id="recibo-fecha">-</span></p>
+        <p><strong>Usuario:</strong> <span id="recibo-usuario">-</span></p>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-centered mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>OT</th>
+                  <th>Descripción</th>
+                  <th>Categoría</th>
+                  <th>Comprobante</th> <th>Monto</th>
+                </tr>
+              </thead>
+              <tbody id="recibo-gastos">
+                <tr>
+                  <td colspan="5" class="text-center">Cargando...</td>
+                </tr>
+              </tbody>
+            </table>
+        </div>
+
+        <hr />
+        <p><strong>Monto Recibido:</strong> S/ <span id="recibo-monto-recibido">-</span></p>
+        <p><strong>Total:</strong> S/ <span id="recibo-total">-</span></p>
+        <p><strong>Vuelto:</strong> S/ <span id="recibo-vuelto">-</span></p>
+      </div>
+      <div class="modal-footer">
+        <a id="btnEditarRecibo" href="#" type="button" class="btn btn-success">Editar</a>        
+        <button type="button" class="btn btn-primary" onclick="descargarPDF()">Descargar PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="cajaChicaModal" tabindex="-1" role="dialog" aria-labelledby="cajaChicaModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cajaChicaModalLabel">Registrar Caja Chica</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{% url 'registrar_caja_chica' %}" id="form-caja-chica">
+          {% csrf_token %}
+
+          <div class="form-group mb-3">
+            <label for="fecha">Fecha</label>
+            <input type="date" class="form-control" id="fecha" name="fecha" onchange="verificarCajaChica()" required />
+          </div>
+
+          <div class="form-group mb-3" id="saldo_inicial_group" style="display: none">
+            <label for="saldo_inicial">Saldo Inicial</label>
+            <input type="number" class="form-control" id="saldo_inicial" name="saldo_inicial" step="0.01" />
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="ingreso">Ingreso</label>
+            <input type="number" class="form-control" id="ingreso" name="ingreso" step="0.01" required />
+          </div>
+
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary mb-3">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+<script>
+  // Función para verificar si existe una Caja Chica para el día anterior
+  function verificarCajaChica() {
+    var fecha = document.getElementById("fecha").value;
+    if (!fecha) return;
+
+    fetch(`../verificar_caja_chica/?fecha=${fecha}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.existe_actual || data.existe_anterior) {
+          document.getElementById("saldo_inicial_group").style.display = "none";
+        } else {
+          document.getElementById("saldo_inicial_group").style.display = "block";
+        }
+    })
+    .catch(error => console.error("Error al verificar caja chica:", error));
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+      verificarCajaChica();
+      
+      // Configuración de fecha por defecto
+      let fechaInput = document.getElementById("fecha");
+      let today = new Date().toISOString().split("T")[0];
+      fechaInput.value = today;
+
+      // Eventos
+      document.getElementById("fecha").addEventListener("change", verificarCajaChica);
+      
+      // Botón Editar Caja
+      document.addEventListener("click", function (event) {
+        if (event.target.closest(".btn-editar-caja")) {
+            let button = event.target.closest(".btn-editar-caja");
+            let id = button.getAttribute("data-id");
+            let ingreso = button.getAttribute("data-ingreso");
+            document.getElementById("editar-id").value = id;
+            document.getElementById("editar-ingreso").value = ingreso;
+          }
+      });
+
+      // Formulario Editar Caja
+      document.getElementById("form-editar-caja").addEventListener("submit", function (event) {
+        event.preventDefault();
+        let formData = new FormData(this);
+        let data = Object.fromEntries(formData); 
+
+        fetch("{% url 'editar_caja_chica' %}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              alert("Ingreso actualizado correctamente.");
+              location.reload();
+            } else {
+              alert("Error al actualizar el ingreso: " + data.message);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      });
+
+      function getCSRFToken() {
+          return document.querySelector('[name=csrfmiddlewaretoken]').value;
+      }
+
+      // Modal Caja Chica
+      var abrirModalBtn = document.getElementById('abrirModalBtn');
+      var modal = new bootstrap.Modal(document.getElementById('cajaChicaModal'));
+      
+      document.getElementById("cajaChicaModal").addEventListener("show.bs.modal", verificarCajaChica);
+      abrirModalBtn.addEventListener('click', function() { modal.show(); });
+      
+      // ============================================
+      // LÓGICA VER RECIBO CON BOTÓN DE IMAGEN
+      // ============================================
+      document.addEventListener("click", function (event) {
+        // Delegación de eventos para capturar clicks en botones dinámicos
+        const btn = event.target.closest(".btn-ver-recibo");
+        if (btn) {
+          let reporteId = btn.getAttribute("data-reporte-id");
+          let fecha = btn.getAttribute("data-reporte-fecha");
+          let usuario = btn.getAttribute("data-reporte-usuario");
+          let montoRecibido = btn.getAttribute("data-reporte-monto-recibido");
+          let total = btn.getAttribute("data-reporte-total");
+          let vuelto = btn.getAttribute("data-reporte-vuelto");
+
+          // Llenar datos cabecera
+          document.getElementById("btnEditarRecibo").href = "../gastos/editar_gastos/" + reporteId + "/";
+          document.getElementById("recibo-fecha").innerText = fecha || "-";
+          document.getElementById("recibo-usuario").innerText = usuario || "-";
+          document.getElementById("recibo-monto-recibido").innerText = montoRecibido || "0.00";
+          document.getElementById("recibo-total").innerText = total || "0.00";
+          document.getElementById("recibo-vuelto").innerText = vuelto || "0.00";
+          
+          let modalBody = document.getElementById("recibo-gastos");
+          modalBody.innerHTML = `<tr><td colspan="5" class="text-center">Cargando...</td></tr>`;
+
+          // AJAX para obtener gastos
+          fetch(`../api/gastos/?reporte=${reporteId}`)
+          .then((response) => {
+            if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+            return response.json();
+          })
+          .then((data) => {
+            // Soporte para ambos formatos de respuesta (results o gastos)
+            const lista = data.results || data.gastos || [];
+
+            if (lista.length > 0) {
+              modalBody.innerHTML = lista.map(gasto => {
+                    // ========================================================
+                    // MODIFICACIÓN AQUI: BOTÓN EN LUGAR DE IMAGEN THUMBNAIL
+                    // ========================================================
+                    let imagenHtml = '<span class="text-muted small">Sin img</span>';
+                    
+                    if (gasto.archivo && gasto.archivo !== "") {
+                        // Renderiza como un botón azul con icono de imagen
+                        imagenHtml = `
+                            <a href="${gasto.archivo}" target="_blank" class="btn btn-sm btn-info" title="Ver comprobante">
+                                <i class="mdi mdi-image-area" style="font-size: 1.2em;"></i>
+                            </a>`;
+                    }
+
+                    return `
+                    <tr>
+                      <td>${gasto.ot_str || "-"}</td>
+                      <td>${gasto.descripcion || "-"}</td>
+                      <td>${gasto.categoria || "-"}</td>
+                      <td class="text-center">${imagenHtml}</td> <td>S/ ${!isNaN(parseFloat(gasto.monto)) ? parseFloat(gasto.monto).toFixed(2) : "0.00"}</td>
+                    </tr>`;
+                }).join("");
+            } else {
+              modalBody.innerHTML = `<tr><td colspan="5" class="text-center">No hay gastos registrados.</td></tr>`;
+            }
+          })
+          .catch((error) => {
+            modalBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error al cargar datos.</td></tr>`;
+            console.error(error);
+          });
+        }
+      });
+
+      // Lógica Rechazo
+      let gastoIdSeleccionado = null;
+      let usuarioSeleccionado = "";
+      let fechaSeleccionada = "";
+
+      document.addEventListener("click", function(event) {
+          const btnRechazar = event.target.closest(".btn-rechazar");
+          if(btnRechazar){
+            event.preventDefault();
+            gastoIdSeleccionado = btnRechazar.getAttribute("data-gasto-id");
+            usuarioSeleccionado = btnRechazar.getAttribute("data-gasto-usuario") || "Sin Usuario";
+            fechaSeleccionada = btnRechazar.getAttribute("data-gasto-fecha");
+
+            document.getElementById("modal-usuario").innerText = usuarioSeleccionado;
+            document.getElementById("modal-fecha").innerText = fechaSeleccionada;
+
+            new bootstrap.Modal(document.getElementById("modalRechazo")).show();
+          }
+      });
+
+      document.getElementById("guardarMensaje").addEventListener("click", function (event) {
+          event.preventDefault();
+          const mensaje = document.getElementById("mensajeRechazo").value;
+
+          if (mensaje.trim() === "") {
+            alert("Debes escribir un mensaje antes de rechazar.");
+            return;
+          }
+
+          fetch("/api/reportes/" + gastoIdSeleccionado + "/rechazar/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": getCSRFToken(),
+            },
+            body: JSON.stringify({
+              mensaje: mensaje,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                location.reload();
+              } else {
+                alert("Hubo un error al rechazar el gasto.");
+              }
+            })
+            .catch((error) => console.error("Error:", error));
+      });
+
+      // Tablas DataTable (Saldo y Pendientes)
+      $("#tblSaldo").DataTable({
+          paging: false, searching: false, info: false, processing: true,
+          order: [[2, 'desc']],
+          ajax: { url: "{% url 'saldos-list' %}", type: "GET", dataSrc: "results" },
+          columns: [
+            { data: "username" },
+            { data: "saldo_inicial", render: $.fn.dataTable.render.number( ',', '.', 2, 'S/ ' ) },
+            { data: "fecha", render: function(data) { return moment(data).format("DD/MM/YY HH:mm"); } },
+            { data: null, orderable: false, render: function (data, type, row) {
+                    return `<button type="button" class="btn btn-danger delete" data-id="${row.id}"><i class="mdi mdi-window-close"></i></button>`;
+            } }
+          ],
+      });
+
+      $('#frmSaldo').submit(function(event) {
+          event.preventDefault();
+          var saldo = $('#txtSaldo').val();
+          var usuario_id = $('#sltUsuario').val();
+          $.ajax({
+            url: '../api/saldos/', method: 'POST',
+            data: { saldo_inicial: saldo, saldo_actual: saldo, usuario: usuario_id, csrfmiddlewaretoken: '{{ csrf_token }}' },
+            success: function() {
+              alert("Saldo asignado correctamente");
+              $('#tblSaldo').DataTable().ajax.reload();
+              $('#frmSaldo')[0].reset();
+            },
+            error: function(xhr) { alert("Error al guardar saldo"); }
+          });
+      });
+
+      $('#tblSaldo').on('click', '.delete', function() {
+          var saldoId = $(this).data('id');
+          if (confirm("¿Estás seguro de eliminar este saldo?")) {
+              $.ajax({
+                  url: '../api/saldos/' + saldoId + '/', method: 'DELETE',
+                  headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                  success: function() { $('#tblSaldo').DataTable().ajax.reload(); },
+                  error: function() { alert("Error al eliminar saldo"); }
+              });
+          }
+      });
+
+      $("#tabla_pendientes").DataTable({
+          language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+          pageLength: 25, order: [[0, "desc"]],
+          rowGroup: {
+            dataSrc: 1,
+            startRender: function (rows, group) {
+              let total = rows.data().pluck(3).toArray().reduce((acc, val) => {
+                  let numero = parseFloat(val.toString().replace("S/", "").trim());
+                  return acc + (isNaN(numero) ? 0 : numero);
+                }, 0);
+              return $("<tr/>").append('<td colspan="5"><strong>' + group + "</strong></td>").append('<td colspan="2"><strong>Total: S/ ' + total.toFixed(2) + "</strong></td>");
+            },
+          },
+      });
+  });
+</script>
+
+<script>  
+  $(document).ready(function () {
+
+    const csrftoken = getCookie('csrftoken');
+
+    start_date = moment().startOf("week").format("YYYY-MM-DD");
+    end_date = moment().endOf("week").format("YYYY-MM-DD");
+
+    function fetch_data(start_date = "", end_date = "") {
+      let url = "../api/cajachica/";
+      if (start_date && end_date) {
+        url += "?start_date=" + start_date + "&end_date=" + end_date;
+      }
+      $.getJSON(url, function (data) {
+          $("#tablaCaja").DataTable().destroy(); 
+          const table = $("#tablaCaja").DataTable({
+            data: [], // Se llenará con rows.add
+            columns: [
+              { data: "fecha" }, { data: "usuario_str" , defaultContent: ""},
+              { data: "total" }, { data: "boton", defaultContent: "", render: function (data) { return data; } },
+              { data: "saldo" ,  defaultContent: ""}
+            ],
+            columnDefs: [
+              { targets: [2, 4], render: $.fn.dataTable.render.number(",", ".", 2, "S/ "), className: "dt-body-right" },
+              { targets: 3, className: "dt-body-center" }
+            ],
+            ordering:false, fixedHeader: true, paging: false, info: false,
+            language: { emptyTable: "No hay datos disponibles" },
+            dom: "<'row'<'col-md-6'l><'col-md-6'f>><'row'<'col-md-12'B>><'row'<'col-md-12'tr>><'row'<'col-md-5'i><'col-md-7'p>>",
+            buttons: [
+              {
+                text: '<i class="mdi mdi-file-excel me-1"></i> Exportar a Excel',
+                className: "btn-success",
+                action: function () {
+                  // Lógica exportación
+                  const api = $('#tablaCaja').DataTable();
+                  const data = api.rows({ search: 'applied' }).data().toArray();
+                  let lastGroup = null;
+                  let isFirstGroup = true;
+                  let datosParaExportar = [];
+
+                  data.forEach((rowData, i) => {
+                    const group = rowData.fecha_ingreso;
+                    if (lastGroup !== group) {
+                      if (isFirstGroup) {
+                        datosParaExportar.push({ tipo: 'group-header', label: 'Saldo Anterior', total: rowData.total1 });
+                        isFirstGroup = false;
+                      } else {
+                        datosParaExportar.push({ tipo: 'group-footer', label: 'Saldo', total: rowData.saldo1 });
+                        datosParaExportar.push({ tipo: 'group-footer', label: `Ingreso ${rowData.fecha_ingreso}`, ingreso: rowData.ingreso });
+                        datosParaExportar.push({ tipo: 'group-footer', label: 'Totales', total: rowData.total1 });
+                      }
+                    }
+                    datosParaExportar.push({ tipo: 'data', ...rowData });
+                    lastGroup = group;
+                  });
+
+                  fetch("{% url 'exportar_cajachica_excel' %}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+                    body: JSON.stringify(datosParaExportar),
+                  })
+                  .then(response => response.blob())
+                  .then(blob => {
+                    const fechaInicio = moment(start_date).format("DD-MM");
+                    const fechaFin = moment(end_date).format("DD-MM");
+                    const nombreArchivo = `CAJA CHICA DEL ${fechaInicio} AL ${fechaFin}.xlsx`;
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = nombreArchivo;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  });
+                }
+              }
+            ],
+            drawCallback: function (settings) {
+              const api = this.api();
+              const rows = api.rows({ page: "current" }).nodes();
+              const data = api.rows({ page: "current" }).data();
+              let lastGroup = null;
+              let isFirstGroup = true;
+
+              data.each(function (rowData, i) {
+                const group = rowData.fecha_ingreso;
+                const ingreso = parseFloat(rowData.ingreso);
+                const ingresoText = !isNaN(ingreso) ? ingreso.toFixed(2) : "0.00";
+
+                if (lastGroup !== group) {
+                  if (isFirstGroup) {
+                    $(rows).eq(i).before(`<tr class="group-header" style="background-color: #D6DCE4;"><td colspan="4" style="text-align: center;"><strong>Saldo Anterior</strong></td><td style="text-align: right;"><strong>S/ ${rowData.total1}</strong></td></tr>`);
+                    isFirstGroup = false;
+                  } else {
+                    $(rows).eq(i).before(`
+                      <tr class="group-footer" style="background-color:#D6DCE4;"><td colspan="4" style="text-align: center;"><strong>Saldo</strong></td><td style="text-align: right;"><strong>S/ ${rowData.saldo1}</strong></td></tr>
+                      <tr class="group-footer" style="background-color:#D6DCE4;"><td colspan="4" style="text-align: center;"><strong>Ingreso ${rowData.fecha_ingreso}</strong></td><td style="text-align: right;" class="editable-ingreso" data-id="${rowData.id_cajachica}" data-fecha="${rowData.fecha_ingreso}"><strong>S/ <span class="ingreso-text">${ingresoText}</span></strong></td></tr>
+                      <tr class="group-footer" style="background-color: #D6DCE4;"><td colspan="4" style="text-align: center;"><strong>Totales</strong></td><td style="text-align: right;"><strong>S/ ${rowData.total1}</strong></td></tr>
+                    `);
+                  }
+                }
+                lastGroup = group;
+              });
+            }
+          });
+
+          // Transformamos los datos
+          const flatRows = [];
+          data.forEach((caja) => {
+            const label = `${caja.fecha_ingreso} - ${caja.ingreso}`;
+            let saldoAnterior = caja.total1;
+
+            if (caja.reportes && caja.reportes.length > 0) {
+              caja.reportes.forEach((reporte) => {
+                const saldo = saldoAnterior - parseFloat(reporte.total);
+                
+                // ============================================
+                // AQUI TAMBIEN AGREGAMOS EL BOTON DE IMAGEN EN CAJA CHICA
+                // ============================================
+                flatRows.push({
+                  id_cajachica: caja.id_cajachica, fecha_ingreso: caja.fecha_ingreso, ingreso: caja.ingreso,
+                  total1: caja.total1, saldo1: caja.saldo1, saldo2: saldo, group_label: label,
+                  usuario_str: reporte.usuario_str, fecha: reporte.fecha, total: reporte.total, saldo: saldo,
+                  estado_aprobacion: reporte.estado_aprobacion, 
+                  boton: `<button class="btn btn-sm btn-info btn-ver-recibo"
+                              data-reporte-id="${reporte.id}" data-reporte-fecha="${reporte.fecha}"
+                              data-reporte-usuario="${reporte.usuario_str}" data-reporte-monto-recibido="${reporte.monto_recibido}"
+                              data-reporte-total="${reporte.total}" data-reporte-vuelto="${reporte.vuelto}"
+                              data-bs-toggle="modal" data-bs-target="#modalRecibo"><i class="uil uil-receipt"></i></button>`,
+                });
+                saldoAnterior = saldo;
+              });
+            } else {
+              flatRows.push({
+                id_cajachica: caja.id_cajachica, fecha_ingreso: caja.fecha_ingreso, ingreso: caja.ingreso,
+                total1: caja.total1, saldo1: caja.saldo1, saldo2: caja.saldo2, group_label: label,
+                totales: caja.totales, usuario_str: "", fecha: "", total: "", estado_aprobacion: ""
+              });
+            }
+          });
+          table.clear().rows.add(flatRows).draw();
+      });
+    }
+
+    $("#dash-daterange").daterangepicker({
+        locale: { format: "DD/MM/YYYY" },
+        startDate: moment().startOf("week"),
+        endDate: moment().endOf("week"),
+      }, function (start, end) { fetch_data(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD")); }
+    );
+    fetch_data(start_date, end_date);
+
+    $(document).on("click", ".editable-ingreso", function () {
+      const td = $(this);
+      const currentValue = parseFloat(td.find(".ingreso-text").text()).toFixed(2);
+      var id = $(this).closest("td").data("id");
+      if (td.find("input").length > 0) return;
+
+      td.html(`<input type="number" step="0.01" value="${currentValue}" style="width: 80px; text-align: right;" />`);
+      td.find("input").focus().on("blur", function () {
+          const newValue = parseFloat(this.value).toFixed(2);
+          if (isNaN(newValue) || newValue < 0) {
+            alert("Por favor ingrese un valor válido.");
+            td.html(`<strong>S/ <span class="ingreso-text">${currentValue}</span></strong>`);
+            return;
+          }
+          fetch(`../api/cajachica/${id}/`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+            body: JSON.stringify({ ingreso: newValue }),
+          }).then(() => window.location.reload()).catch(() => window.location.reload());
+      });
+    });
+
+    function descargarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const recibo = document.getElementById("recibo-content");
+      html2canvas(recibo, { scale: 2, useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = 190;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        doc.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+        doc.save("recibo.pdf");
+      });
+    }
+    // Asignar función global para el onclick del HTML
+    window.descargarPDF = descargarPDF;
+  });
+</script>
+{% endblock %}

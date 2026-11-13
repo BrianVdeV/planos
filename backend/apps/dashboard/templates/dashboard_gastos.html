@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Gastos{% endblock title %}
+{% block content %} {% load static %}
+
+<!-- Plugin css -->
+
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <div class="page-title-right">
+        <form class="d-flex">
+          <div class="input-group">
+            <input class="form-control form-control-light" type="text" id="daterange_textbox" />
+            <span class="input-group-text bg-primary border-primary text-white">
+              <i class="mdi mdi-calendar-range font-13"></i>
+            </span>
+          </div>
+        </form>
+      </div>
+      <h4 class="page-title">Gastos</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+<div class="col-xl-9 col-lg-8">
+  <div class="card card-h-100">
+    <div class="card-body">
+      <h4 class="header-title mb-3">detalles de Gastos</h4>
+
+      <div dir="ltr">
+        <div id="sessions-overview" class="apex-charts mt-3" data-colors="#0acf97"></div>
+      </div>
+    </div>
+    <!-- end card-body-->
+  </div>
+  <!-- end card-->
+   
+</div>
+<div class="col-xl-3 col-lg-6 order-lg-1">
+  <div class="card">
+      <div class="d-flex card-header justify-content-between align-items-center">
+          <h4 class="header-title">Gastos por Categorias</h4>
+          
+      </div>
+
+      <div class="card-body pt-0">
+          <div id="average-sales" class="apex-charts mb-4 mt-2"
+              data-colors="#727cf5,#0acf97,#fa5c7c,#ffbc00"></div>
+         
+
+          <div class="chart-widget-list">
+              
+          </div>
+      </div> <!-- end card-body-->
+  </div> <!-- end card-->
+</div> <!-- end col-->
+</div>
+{% endblock content %}
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+<script>
+  $(document).ready(function () {
+    
+    let fechaInicio = moment().startOf("week").format("YYYY-MM-DD");
+    let fechaFin = moment().endOf("week").format("YYYY-MM-DD");
+    $("#daterange_textbox").daterangepicker(
+      $.extend({}, drpConfig, 
+      {
+        startDate: moment().startOf("week"),
+        endDate: moment().endOf("week")
+      }),
+      function (start, end) {
+        actualizarGraficos(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"));
+      }
+    );
+    // Llamar al gráfico con la fecha predeterminada "Esta semana"
+    actualizarGraficos(fechaInicio, fechaFin);
+  });
+
+
+  function actualizarGraficos(fechaInicio, fechaFin) {
+    coactualizarGrafi(fechaInicio, fechaFin);
+    actualizarGraficoVentas(fechaInicio, fechaFin);
+  }
+  function coactualizarGrafi(fechaInicio, fechaFin) {
+    $.ajax({
+        url: "../../api/gastos/gastos_por_fecha/",
+        method: "GET",
+        data: { fechaInicio: fechaInicio, fechaFin: fechaFin },
+        dataType: "json",
+        success: function (data) {
+            let options = {
+                dataLabels: {
+                    enabled: false // Oculta las etiquetas de los puntos
+                },
+                series: [
+                    {
+                        name: 'Gastos',
+                        data: data.data
+                    }
+                ],
+                chart: {
+                    type: 'area',
+                    height: 350
+                },
+                xaxis: {
+                    categories: data.labels
+                },
+                colors: ['#E63946'],
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.3,
+                        opacityTo: 0.7,
+                        stops: [0, 90, 100]
+                    }
+                },
+                tooltip: {
+                  enabled: true,
+                  shared: true, // 🔥 Muestra "Gastos"en un tooltip
+                  custom: function({ series, dataPointIndex, w }) {
+                      let fecha = w.globals.categoryLabels[dataPointIndex] || "Sin fecha"; // 🔹 Asegura que muestra la fecha correcta
+                      let gastos = series[0][dataPointIndex] ?? 0; // Datos de Gastos
+              
+                      let colores = w.config.colors; // Colores de las series
+              
+                      return `<div style="background: white; padding: 8px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                          <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">${fecha}</div>
+                          <div style="display: flex; align-items: center;">
+                              <span style="width: 12px; height: 12px; border-radius: 50%; background-color: ${colores[0]}; display: inline-block; margin-right: 5px;"></span>
+                              <span style="color:#E63946;">Gastos: ${gastos}</span>
+                          </div>
+                      </div>`;
+                  }
+                },
+                stroke: {
+                    width: [2, 2]
+                }
+            };
+
+            // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
+            if (window.miGrafico) {
+                window.miGrafico.destroy();
+            }
+
+            // Crear el gráfico con las opciones definidas
+            window.miGrafico = new ApexCharts(document.querySelector("#sessions-overview"), options);
+            window.miGrafico.render();
+        }
+    });
+  }
+
+
+  // Función para actualizar el gráfico de Ventas
+  function actualizarGraficoVentas(fechaInicio, fechaFin) {
+    $.ajax({
+      url: "../../api/gastos/gastos_por_categoria/",
+      method: "GET",
+      data: { fechaInicio: fechaInicio, fechaFin: fechaFin },
+      dataType: "json",
+      success: function (data) {
+          let options = {
+              chart: { type: 'donut', height: 350 },
+              series: data.data,
+              labels: data.labels,
+              colors: ['rgb(10, 207, 151)', 'rgb(250, 92, 124)', 'rgb(255, 188, 0)', 'rgb(114, 124, 245)',
+              'rgb(60, 220, 100)', 'rgb(255, 120, 80)', 'rgb(150, 80, 255)', 'rgb(80, 190, 255)'],
+              legend: {
+                position: 'bottom',
+                horizontalAlign: 'left',
+                floating: false,
+                height: 'auto',
+                markers: { show: false },
+                formatter: function (seriesName, opts) {
+                  let index = opts.seriesIndex;
+                  let monto = data.data[index].toFixed(2);
+                  let color = opts.w.globals.colors[index];
+          
+                  // Reducir tamaño si hay demasiados elementos
+                  let totalItems = opts.w.config.series.length;
+                  let fontSize = totalItems > 5 ? '12px' : '14px'; // Ajusta según la cantidad de elementos
+          
+                  return `<div style="display: flex; justify-content: space-between; width: 200px; align-items: center; margin-bottom: 5px; font-size: ${fontSize};">
+                              <div style="display: flex; align-items: center;">
+                                  <span>${seriesName}</span>
+                              </div>
+                              <span style="text-align: right; flex-shrink: 0;">S/${monto}</span>
+                          </div>`;
+                }
+              },
+              tooltip: {
+                y: {
+                  formatter: function (value, { seriesIndex }) {
+                    return data.cantidad[seriesIndex];
+                  }
+                }
+              }
+              
+          };
+
+          if (window.graficoGastos) {
+              window.graficoGastos.destroy();
+          }
+
+          window.graficoGastos = new ApexCharts(document.querySelector("#average-sales"), options);
+          window.graficoGastos.render();
+      },
+      error: function (xhr, status, error) {
+          console.error("Error en la solicitud AJAX:", error);
+      }
+  });
+}
+
+
+</script>
+{% endblock %}

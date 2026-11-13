@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Informes de Gastos{% endblock title %}
+
+{% block vendor_js %}
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+{% endblock vendor_js %}
+{% block content %}
+<!-- Plugin css -->
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Gastos</h4>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row mb-2">
+          <div class="col-xl-6">
+            <p>
+              Total:
+              <strong id="total-monto">S/ 0.00</strong>
+            </p>
+          </div>
+          <div class="col-xl-6">
+            <div class="text-sm-end">
+              <button id="btnExport" class="btn btn-success mb-2" type="button">
+                <i class="mdi mdi-file-excel"></i> Exportar
+              </button>
+              <button id="btnFiltro" class="btn btn-outline-primary mb-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                <i class="mdi mdi-filter-variant"></i> Filtros
+                <span id="badgeFiltros" class="badge bg-light text-dark ms-1 d-none">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <table class="table table-sm dt-responsive w-100" id="table">
+          <thead>
+            <th>Fecha</th>
+            <th>Proyecto</th>
+            <th>Tipo</th>
+            <th>Usuario</th>
+            <th>Descripción</th>
+            <th>Importe</th>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include 'partials/_offcanvas/filter_gastos.html' %}
+{% endblock content %}
+{% block page_js %}
+<script>
+  $(document).ready(function () {
+    var table = $("#table").DataTable({
+      pageLength: 50,
+      processing: true,
+      serverSide:true,
+      order: [[0, "desc"]],
+      language: {
+        paginate: {
+          previous: "<i class='mdi mdi-chevron-left'>",
+          next: "<i class='mdi mdi-chevron-right'>",
+        },
+      },
+      ajax: {
+        url: "../../api/gastos/?format=datatables",
+        data: function (d) {
+          d.reporte__usuario = $('#usuario').val();
+          d.ots = $('#ots').val();
+          d.categoria = $('#categoria').val();
+          d.fecha_inicio = $('#fecha_inicio').val();
+          d.fecha_fin = $('#fecha_fin').val();
+        },
+      },
+      columns: [
+        {
+          data: "fecha",
+          name: "reporte__fecha",
+          render: function (data, type, row) {
+            return moment(data).format('DD/MM/YY');
+          }
+        },
+        { data: "ot", name:"ot__id, ot__nombre" },
+        { data: "categoria" },
+        { data: "usuario_nombre", name: "reporte__usuario__username" },
+        { data: "descripcion" },
+        { data: "monto" },
+      ],
+      drawCallback: function () {
+        $(".dataTables_paginate > .pagination").addClass(
+          "pagination-rounded"
+        );
+        var api = this.api();
+        var json = api.ajax.json();
+
+        // 2. Verificar que nuestro total venga en la respuesta y actualizar el DOM
+        if (json && json.total_monto_filtrado !== undefined) {
+          // Formateamos el número para que tenga 2 decimales y separador de miles
+          var totalFormateado = parseFloat(json.total_monto_filtrado).toLocaleString('es-PE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          
+          // Actualizamos el elemento en el HTML
+          $("#total-monto").text("S/ " + totalFormateado);
+        }
+      },
+    });
+  
+
+    function actualizarBadgeFiltros() {
+      let filtrosActivos = 0;
+      
+      if ($("#categoria").val() !== "") filtrosActivos++;
+      if ($("#fecha_inicio").val() !== "") filtrosActivos++;
+      if ($("#fecha_fin").val() !== "") filtrosActivos++;
+      if ($("#usuario").val() !== "") filtrosActivos++;
+      if ($("#ots").val() !== "") filtrosActivos++;
+
+      const badge = document.getElementById("badgeFiltros");
+      const boton = document.getElementById("btnFiltro");
+      
+      if (filtrosActivos > 0) {
+        badge.textContent = filtrosActivos;
+        badge.classList.remove("d-none");
+        boton.classList.remove("btn-outline-primary");
+        boton.classList.add("btn-primary");
+      } else {
+        badge.classList.add("d-none");
+        boton.classList.remove("btn-primary");
+        boton.classList.add("btn-outline-primary");
+      }
+    }
+    
+    actualizarBadgeFiltros();
+
+    $('#btnAplicarFiltro').on('click', function() {
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnLimpiarFiltro').on('click', function () {
+      $('#categoria').val("");
+      $('#fecha_inicio').val("");
+      $('#fecha_fin').val("");
+      $('#usuario').val("");
+      $('#ots').val("");
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnExport').on('click', function() {
+      var params = table.ajax.params();
+      var queryString = $.param(params);
+      var urlExcel = "{% url 'gastos-list' %}?format=xlsx&" + queryString;
+      window.open(urlExcel, '_blank');
+    });
+  });
+</script>
+{% endblock %}

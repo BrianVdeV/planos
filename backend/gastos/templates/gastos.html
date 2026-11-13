@@ -1,0 +1,379 @@
+{% extends 'base.html' %} 
+{% load static %}
+{% block title %}Lista de Gastos{% endblock title %}
+{% block vendor_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css"/>
+{% endblock vendor_css %}
+{% block vendor_js %}
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+<script src="{% static "vendor/handlebars/handlebars.min.js" %} "></script>
+<script src="{% static "vendor/typeahead.js/typeahead.bundle.min.js" %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
+{% endblock vendor_js %}
+{% block content %} 
+
+<div class="card position-fixed top-0 start-50 translate-middle-x mt-2 bg-primary text-white shadow-sm" style="width: 200px; height: 50px; z-index: 1050;">
+  <div class="card-body d-flex align-items-center justify-content-center p-0">
+    <i class="ri-coin-fill fs-4 me-2"></i>
+    <span class="fw-bold fs-4">Saldo: <strong>S/ {{ saldo_usuario }}</strong></span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <div class="page-title-right d-flex align-items-center gap-2">
+        <a href="https://conoce.planosperu.com.pe/doc/reporte-de-gastos-Pwa56vEggw" class="btn btn-info btn-sm rounded-pill mb-3">
+          <i class="mdi mdi-help-circle me-1"></i> Ayuda
+        </a>
+        
+        <a href="{% url 'crear_gastos' %}" class="btn btn-primary rounded-pill mb-3">
+          <i class="mdi mdi-plus"></i> Crear nuevo gasto
+        </a>
+        
+        <button class="btn btn-danger rounded-pill mb-3" id="verMensajesRechazo" style="display:none;" >
+            Ver Mensajes de Rechazo
+        </button>
+    </div>
+      <h4 class="page-title">Reporte de Gastos</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="text-sm">
+              <button id="btnEnviarAprobacion" class="btn btn-success mb-2 d-none">Enviar para la aprobación</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <table id="tbl" class="table dt-responsive w-100">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Recibido</th>
+                <th>Total</th>
+                <th>Vuelto</th>
+                <th></th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalMensajesRechazo" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Mensajes de Rechazo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <ul id="listaMensajesRechazo" class="list-group"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="standard-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="standard-modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h4 class="modal-title" id="standard-modalLabel">Reporte de Gastos</h4>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+          </div>
+          <div class="modal-body">
+              <div class="table-responsive">
+                <table class="table table-centered mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>OT</th>
+                            <th>Descripción</th>
+                            <th>Categoria</th>
+                            <th>Comprobante</th> 
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+              </div>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+      </div>
+  </div>
+</div>
+
+{% endblock %} 
+
+{% block page_js %}
+<script>
+  function verificarMensajesRechazo() {
+    fetch("{% url 'reporte-mis-reportes' %}")
+        .then(response => response.json())
+        .then(results => {
+            let hayMensajes = results.results.some(reporte => 
+                reporte.estado_aprobacion === 3 && 
+                reporte.mensaje && 
+                reporte.mensaje.trim() !== ""
+            );
+            document.getElementById("verMensajesRechazo").style.display = hayMensajes ? "inline-block" : "none";
+        })
+        .catch(error => console.error("Error al verificar mensajes de rechazo:", error));
+  }
+
+  $(document).ready(function () {
+    moment.locale("es");
+
+    document.getElementById("verMensajesRechazo").style.display = "none";
+    verificarMensajesRechazo();
+    
+    // Botón ver mensajes
+    document.getElementById("verMensajesRechazo").addEventListener("click", function () {
+        fetch("{% url 'reporte-mis-reportes' %}")
+            .then(response => response.json())
+            .then(results => {
+                let listaMensajes = document.getElementById("listaMensajesRechazo");
+                listaMensajes.innerHTML = ""; 
+                
+                let mensajesRechazo = results.results.filter(reporte => 
+                    reporte.estado_aprobacion === 3 && 
+                    reporte.mensaje && 
+                    reporte.mensaje.trim() !== ""
+                );
+                
+                let mensajesUnicos = new Set();
+                mensajesRechazo.forEach(reporte => {
+                    let claveMensaje = `${reporte.usuario_str}-${reporte.fecha}-${reporte.mensaje}`;
+                    if (!mensajesUnicos.has(claveMensaje)) {
+                        mensajesUnicos.add(claveMensaje);
+                        let listItem = document.createElement("li");
+                        listItem.className = "list-group-item";
+                        listItem.innerHTML = `<strong>Usuario:</strong> ${reporte.usuario_str} <br> 
+                                              <strong>Fecha:</strong> ${reporte.fecha} <br> 
+                                              <strong>Mensaje:</strong> ${reporte.mensaje}`;
+                        listaMensajes.appendChild(listItem);
+                    }
+                });
+
+                if (mensajesRechazo.length > 0) {
+                    let modal = new bootstrap.Modal(document.getElementById("modalMensajesRechazo"));
+                    modal.show();
+                }
+            })
+            .catch(error => console.error("Error al cargar los mensajes de rechazo:", error));
+    });
+
+    // ============================================
+    // CONFIGURACIÓN DE LA TABLA (DATATABLE)
+    // ============================================
+    var table = $("#tbl").DataTable({
+        language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+        pageLength: 50,
+        rowId: "DT_RowId",
+        order: [[0, "desc"]],
+        processing: true,
+        serverSide: true,
+        ajax: { url: "../api/reportes/mis-reportes/?format=datatables" },
+        columns: [
+          { data: "fecha" },
+          { data: "monto_recibido" }, 
+          { data: "total" },
+          { data: "vuelto" },
+          { 
+            data: null,
+            render: function(data, type, row) {
+              return `<button class="btn btn-outline-primary btn-ver-gastos"
+                      data-id="${row.DT_RowId}" 
+                      data-bs-toggle="modal" data-bs-target="#standard-modal"
+                      ><i class="uil uil-receipt"></i></button>`;
+            } 
+          },
+          { 
+            data: "estado_aprobacion",
+            render: function(data) {
+              let icon = "";
+              switch (data) {
+                case 0: icon = '<i class="bi ri-checkbox-blank-circle-line text-secondary fs-4"></i>'; break;
+                case 1: icon = '<i class="bi ri-error-warning-line text-warning fs-4"></i>'; break;
+                case 2: icon = '<i class="bi ri-checkbox-circle-line text-success fs-4"></i>'; break;
+                case 3: icon = '<i class="bi ri-close-circle-line text-danger fs-4"></i>'; break;
+                default: icon = '<i class="bi bi-question-circle text-muted fs-4"></i>';
+              }
+              return icon;
+            }
+          },
+          { data: null }
+        ],
+        columnDefs: [
+          {
+            targets: -1,
+            data: null,
+            render: function(data, type, row) {
+              if (row.estado_aprobacion=== 0 || row.estado_aprobacion=== 3) {
+                return `
+                  <div class="dropdown card-widgets">
+                    <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false"><i class="uil uil-ellipsis-h"></i></a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                      <a href="editar_gastos/`+row.DT_RowId+`/" class="dropdown-item edit"><i class="uil uil-edit me-1"></i>Editar</a>
+                      <a href="javascript:void(0);" class="dropdown-item text-danger delete"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>
+                    </div>
+                  </div>`;
+              }
+              return "";
+            }
+          },
+          {
+            targets: 0,
+            render: function (data) { return data ? moment(data).format('ddd D MMM YY') : data; }
+          },
+          {
+            targets:[1, 2, 3],
+            render: $.fn.dataTable.render.number(",", ".", 2, "S/ ")
+          }
+        ],
+        rowCallback: function(row, data) {
+          if (data.estado_aprobacion != 0 && data.estado_aprobacion != 3) {
+            $(row).css("background-color", "#F5F3F3");
+          }
+        }
+    });
+
+    function verificarReportesSinEnviar() {
+        $.ajax({
+            url: "{% url 'reporte-mis-reportes-sin-enviar' %}",
+            type: "GET",
+            success: function (data) {
+                let totalSinEnviar = Array.isArray(data) ? data.length : (data.results ? data.results.length : 0);
+                if (totalSinEnviar > 0) {
+                    $("#btnEnviarAprobacion").removeClass("d-none");
+                } else {
+                    $("#btnEnviarAprobacion").addClass("d-none");
+                }
+            }
+        });
+    }
+
+    verificarReportesSinEnviar();
+
+    $("#btnEnviarAprobacion").on("click", function () {
+        if (confirm("¿Estás seguro de que deseas enviar todos tus reportes para aprobación?")) {
+            $.ajax({
+                url: "{% url 'reporte-enviar-todos' %}",
+                type: "POST",
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    $("#btnEnviarAprobacion").addClass("d-none");
+                    if (typeof table !== 'undefined') {
+                        table.ajax.reload(null, false);
+                    }
+                },
+                error: function (xhr) {
+                    alert("Ocurrió un error al intentar enviar los reportes.");
+                }
+            });
+        }
+    });
+
+    // Modal Delete
+    $(document).on("click", ".delete", function () {
+        var id = $(this).closest("tr").attr("id");
+        if (confirm("¿Estás seguro de que deseas eliminar este reporte? Esta acción no se puede deshacer.")) {
+            $.ajax({
+                url: `/api/reportes/${id}/`,
+                type: "DELETE", 
+                headers: {
+                  'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function () {
+                  location.reload();
+                },
+                error: function (xhr) {
+                  alert("Ocurrió un error al intentar eliminar el registro.");
+                }
+            });
+        }
+    });
+
+    // ============================================
+    // MODIFICACIÓN AQUI: EVENTO VER DETALLES 
+    // ============================================
+    $(document).on("click", ".btn-ver-gastos", function() {
+      var reporteId = $(this).data("id");
+      
+      // Limpiar y mostrar carga
+      $("#standard-modal table tbody").empty();
+      $("#standard-modal table tbody").append('<tr><td colspan="5" class="text-center">Cargando...</td></tr>');
+
+      $.ajax({
+          // CAMBIO 2: Usar la URL correcta que creamos en urls.py
+          url: `../api/gastos/?reporte=${reporteId}`,  
+          type: "GET",
+          success: function(response) {
+              $("#standard-modal table tbody").empty();
+              let listaGastos = response.results || response.gastos || [];
+
+              if (listaGastos.length > 0) {
+                  listaGastos.forEach(function(gasto) {
+                      
+                      // CAMBIO 3: Lógica para la imagen
+                      let imagenHtml = '<span class="text-muted small">Sin img</span>';
+                      
+                      if (gasto.archivo && gasto.archivo !== "") {
+                          imagenHtml = `
+                              <a href="${gasto.archivo}" target="_blank" title="Ver comprobante">
+                                  <img src="${gasto.archivo}" 
+                                       alt="Comprobante" 
+                                       class="img-thumbnail" 
+                                       style="height: 40px; width: auto; object-fit: contain;">
+                              </a>
+                          `;
+                      }
+
+                      let row = `
+                          <tr>
+                              <td>${gasto.ot_str || "-"}</td>
+                              <td>${gasto.descripcion || "-"}</td>
+                              <td>${gasto.categoria || "-"}</td>
+                              <td class="text-center">${imagenHtml}</td>
+                              <td>S/ ${gasto.monto || "0.00"}</td>
+                          </tr>
+                      `;
+                      $("#standard-modal table tbody").append(row);
+                  });
+              } else {
+                  $("#standard-modal table tbody").append(`
+                      <tr><td colspan="5" class="text-center">No hay gastos registrados en este reporte.</td></tr>
+                  `);
+              }
+          },
+          error: function(xhr) {
+              console.error("Error al cargar gastos:", xhr.responseText);
+              $("#standard-modal table tbody").html(`
+                  <tr><td colspan="5" class="text-center text-danger">Error al cargar datos (${xhr.status}).</td></tr>
+              `);
+          }
+      });
+    });
+  });
+</script>
+{% endblock %}

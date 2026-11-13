@@ -1,0 +1,175 @@
+.description-cell {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  position: relative;
+}
+
+.description-cell.expanded {
+  white-space: normal;
+  overflow: visible;
+}
+
+.description-tooltip {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px;
+  z-index: 1000;
+  max-width: 400px;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  white-space: normal;
+  text-align: left;
+}
+
+.description-cell:hover .description-tooltip {
+  display: block;
+}
+
+.form-control:focus {
+  color: #495057;
+  background-color: #fff;
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-select:focus {
+  color: #495057;
+  background-color: #fff;
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-xs,
+.btn-group-xs > .btn {
+  --bs-btn-padding-y: 0.153rem;
+  --bs-btn-padding-x: 0.75rem;
+  --bs-btn-font-size: 0.6875rem;
+  --bs-btn-border-radius: 0.125rem;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast.custom-slide {
+  animation: slideInLeft 0.5s ease forwards;
+  margin-bottom: 10px;
+}
+
+.toast-swiper {
+  height: 100px;
+}
+/* Estilos para el Ticker de Noticias */
+.news-ticker-container {
+  /* Tomamos un color oscuro como el de la imagen */
+  background-color: #222;
+  color: #fff;
+  padding: 8px 0; /* Un poco de espacio arriba y abajo */
+  z-index: 1050; /* Aseguramos que esté por encima del contenido */
+  overflow: hidden; /* Muy importante para que funcione el 'loop' */
+}
+
+.news-ticker-swiper .swiper-slide {
+  width: auto; /* CRÍTICO: El ancho se adapta al texto */
+  padding: 0 25px; /* Espacio entre cada noticia */
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap; /* Evita que el texto de la noticia se parta */
+
+  /* Agregamos un pequeño separador (opcional) */
+  display: flex;
+  align-items: center;
+}
+
+.news-ticker-swiper .slide-icon {
+  margin-right: 15px; /* Un poco de espacio */
+  font-size: 1.1rem; /* Un poco más grande */
+  line-height: 1; /* Asegura que esté bien alineado */
+}
+
+.news-ticker-swiper .swiper-wrapper {
+  transition-timing-function: linear !important;
+}
+/* --- Animación de Contorno Brillante --- */
+
+/* 1. Define los keyframes para la animación del contorno */
+@keyframes contorno-brillante {
+  0% {
+    box-shadow: 0 0 0 0px rgba(71, 143, 246, 0.7); /* Comienza invisible o suave */
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(71, 143, 246, 0); /* Crece y se desvanece */
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(71, 143, 246, 0.7); /* Vuelve al inicio */
+  }
+}
+
+/* 2. Estilo para el contenedor del icono (el span) */
+.icono-con-contorno-animado {
+  display: inline-flex; /* Para que el span se ajuste al contenido y permita centrar */
+  align-items: center;
+  justify-content: center;
+  position: relative; /* Necesario para el box-shadow relativo */
+  padding: 5px; /* Pequeño espacio para que el contorno no toque el icono */
+  border-radius: 50%; /* Si quieres un contorno circular */
+
+  /* Aplica la animación:
+     - Nombre: contorno-brillante
+     - Duración: 2 segundos
+     - Ritmo: ease-out (aceleración y desaceleración suave)
+     - Repetición: infinite (permanente)
+  */
+  animation: contorno-brillante 2s ease-out infinite;
+}
+
+/* Opcional: Ajusta el icono si necesitas un tamaño o posición específicos */
+.icono-con-contorno-animado i {
+  line-height: 1; /* Asegura que el icono esté bien centrado */
+}
+/* Estilo para el avatar del chatbot */
+.chatbot-avatar {
+    width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    object-fit: cover;
+    align-self: flex-start;
+}
+
+/* Estilo para la burbuja de mensaje del chatbot */
+.chatbot-message-bubble {
+    background-color: #f1f0f0;
+    border-radius: 10px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+/* Estilo para la burbuja de mensaje del usuario */
+.user-message-bubble {
+    background-color: #007bff;
+    color: white;
+    border-radius: 10px;
+    max-width: 80%;
+    word-wrap: break-word;
+    align-self: flex-end;
+}
+.user-message-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
+}

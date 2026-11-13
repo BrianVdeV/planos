@@ -1,0 +1,456 @@
+{% extends 'base.html' %}{% load static %} {% block title %}Equipo{% endblock title %} {% block content %}
+<!-- start page title -->
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Equipo</h4>
+    </div>
+  </div>
+</div>
+<!-- end page title -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <ul class="nav nav-tabs nav-bordered mb-3">
+          <li class="nav-item">
+            <a href="#miembros" data-bs-toggle="tab" aria-expanded="false" class="nav-link active">
+              <i class="mdi mdi-home-variant d-md-none d-block"></i>
+              <span class="d-none d-md-block">Miembros</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#grupos" data-bs-toggle="tab" aria-expanded="true" class="nav-link">
+              <i class="mdi mdi-account-circle d-md-none d-block"></i>
+              <span class="d-none d-md-block">Area</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#organigrama" data-bs-toggle="tab" aria-expanded="false" class="nav-link">
+              <i class="mdi mdi-settings-outline d-md-none d-block"></i>
+              <span class="d-none d-md-block">Organigrama</span>
+            </a>
+          </li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane show active" id="miembros">
+            <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#mdlAddEquipo">Añadir nuevo miembro</button>
+            <table class="table" id="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Usuario</th>
+                  <th>Nombres</th>
+                  <th>Apellidos</th>
+                  <th>Fec. Nacimiento</th>
+                  <th>Área</th>
+                  <th>Rol</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for colaborador in colaboradores %}
+
+                <tr data-id="{{ colaborador.user.id }}">
+                  <td>{{ colaborador.user.id }}</td>
+                  <td>
+                    {% if colaborador.foto %}
+                    <img src="{{ colaborador.foto.url }}" alt="table-user" class="me-2 rounded-circle avatar-xs" />
+                    {% else %} <img src="{% static "images/avatar-1.svg" %}" alt="table-user" class="me-2 rounded-circle avatar-xs"> {% endif %}
+                    <a class="text-body fw-semibold" href="{% url 'perfil_detalle' colaborador.user.id %}">
+                      {% if colaborador.user and not colaborador.user.is_active %}
+                      <del>{{ colaborador.user.username }}</del>
+                      {% else %} {{ colaborador.user.username }} {% endif %}
+                    </a>
+                  </td>
+
+                  <td>{{ colaborador.user.first_name }}</td>
+                  <td>{{ colaborador.user.last_name }}</td>
+                  <td>{{ colaborador.nacimiento|date:'d/m/Y' }}</td>
+                  <td>{{ colaborador.area.nombre }}</td>
+                  <td>
+                    {% if colaborador.user and colaborador.user.is_superuser %}
+                    <span class="badge bg-primary">Administrador</span>
+                    {% else %}
+                    <!-- Aquí puedes agregar otra etiqueta o dejarlo vacío si no se cumple la condición -->
+                    {% endif %}
+                  </td>
+
+                  <td></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-pane" id="grupos">
+            <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#mdlAddArea">Añadir nueva área</button>
+            <table class="table" id="tableAreas">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for area in areas %}
+                <tr data-id="{{ area.id }}">
+                  <td>{{ area.id }}</td>
+                  <td>{{ area.codigo }}</td>
+                  <td>{{ area.nombre }}</td>
+                  <td>
+                    <div class="dropdown card-widgets">
+                      <a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="uil uil-ellipsis-h"></i>
+                      </a>
+                      <div class="dropdown-menu dropdown-menu-end">
+                        <a href="javascript:void(0);" class="dropdown-item btnEditArea"><i class="uil uil-edit me-1"></i>Editar</a>
+                        <a href="javascript:void(0);" class="dropdown-item btnDeleteArea"><i class="uil uil-trash-alt me-1"></i>Eliminar</a>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4">No hay áreas registradas</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-pane" id="organigrama">
+            <div id="tree"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Add-->
+<div id="mdlAddEquipo" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="standard-modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="standard-modalLabel">Añadir miembros</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+      </div>
+      <form method="post" action="{% url 'add_equipo' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            {{add_form.first_name}}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" class="form-control" id="username" name="username" required />
+
+            <!-- Mensaje de error: Ya existe el nombre de usuario -->
+            <div id="username-error" class="invalid-feedback" style="display: none">Este nombre de usuario ya está en uso.</div>
+
+            <!-- Mensaje de éxito: Usuario disponible -->
+            <div id="username-success" class="valid-feedback" style="display: none">Nombre de usuario disponible.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            {{add_form.password1}}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Añadir</button>
+        </div>
+      </form>
+    </div>
+    <!-- /.modal-content -->
+  </div>
+  <!-- /.modal-dialog -->
+</div>
+<!-- Modal para agregar nueva área -->
+<div id="mdlAddArea" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Añadir Área</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'add_area' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Código</label>
+            {{ add_area_form.cod_are }} {% if add_area_form.cod_are.errors %}
+            <div class="text-danger">{{ add_area_form.cod_are.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            {{ add_area_form.nom_are }} {% if add_area_form.nom_are.errors %}
+            <div class="text-danger">{{ add_area_form.nom_are.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Añadir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar área -->
+<div id="mdlEditArea" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Editar Área</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'edit_area' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <input type="hidden" id="editAreaId" name="id_are" />
+          <div class="mb-3">
+            <label class="form-label">Código</label>
+            <input type="text" class="form-control" id="editCodArea" name="cod_are" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="editNomArea" name="nom_are" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Actualizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block page_js %}
+<script src="https://cdn.balkan.app/orgchart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Para el formulario de añadir
+    const addField = document.getElementById("username");
+    if (addField) {
+      addField.addEventListener("input", function () {
+        validarUsuario(this, "username-error", "username-success");
+      });
+    }
+
+    // Para el formulario de editar
+    const editField = document.getElementById("txtUsuario");
+    if (editField) {
+      editField.addEventListener("input", function () {
+        validarUsuario(this, "txtUsuario-error", "txtUsuario-success");
+      });
+    }
+
+    // Función reutilizable para validación AJAX
+    function validarUsuario(inputElement, errorId, successId) {
+      const username = inputElement.value;
+      const errorMessage = document.getElementById(errorId);
+      const successMessage = document.getElementById(successId);
+
+      fetch("{% url 'check-username' %}?username=" + username)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.exists) {
+            errorMessage.style.display = "block";
+            successMessage.style.display = "none";
+            inputElement.classList.add("is-invalid");
+            inputElement.classList.remove("is-valid");
+          } else {
+            errorMessage.style.display = "none";
+            successMessage.style.display = "block";
+            inputElement.classList.remove("is-invalid");
+            inputElement.classList.add("is-valid");
+          }
+        })
+        .catch((error) => console.error("Error:", error));
+    }
+  });
+
+  $(document).ready(function () {
+    // Inicialización de la tabla de equipos
+    $("#table").DataTable({
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json",
+      },
+      pageLength: 25,
+      order: [],
+      columnDefs: [
+        {
+          targets: -1,
+          data: null,
+          defaultContent:
+            '<div class="dropdown card-widgets">' +
+            '<a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown" aria-expanded="false">' +
+            '<i class="uil uil-ellipsis-h"></i></a>' +
+            '<div class="dropdown-menu dropdown-menu-end">' +
+            '<a href="javascript:void(0);" class="dropdown-item btnDeleEqui"">' +
+            '<i class="uil uil-trash-alt me-1"></i><span class="estado-boton">Desactivar/Activar</span></a>' +
+            "</div></div>",
+        },
+      ],
+      rowCallback: function (row, data, index) {
+        var id = $(row).attr("data-id1");
+        console.log("ID en rowCallback:", id);
+
+        // Verificar que `id` existe y es correcto
+        if (id) {
+          console.log("ID fila:", id);
+        }
+
+        // Obtener el botón de estado
+        var estadoBoton = $(row).find(".estado-boton");
+
+        // Cambiar el estado según el valor de `is_active`
+        if (data.is_active == 1) {
+          estadoBoton.text("Desactivar/Activar");
+          $(row).find(".btnDeleEqui").removeClass("btn-success").addClass("btn-danger");
+        } else {
+          estadoBoton.text("Desactivar/Activar");
+          $(row).find(".btnDeleEqui").removeClass("btn-danger").addClass("btn-success");
+        }
+
+        // Asignar el evento de click al botón para cambiar el estado
+        $(row)
+          .find(".btnDeleEqui")
+          .off("click")
+          .on("click", function () {
+            console.log("Cambiando estado para el usuario con id:", id); // Depurar aquí
+            cambiarEstado(id); // Usa el id del usuario que viene en los datos
+          });
+      },
+    });
+
+    // Función para cambiar el estado del usuario
+    function cambiarEstado(userId) {
+      var url = "{% url 'cambiar_estado' %}"; // Define la URL para cambiar el estado en tu archivo urls.py
+
+      // Hacer la solicitud Ajax para cambiar el estado
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          // Si el estado cambia correctamente, actualiza el botón
+          if (data.success) {
+            // Actualizar el estado de la fila sin recargar la página
+            var row = $("#table")
+              .DataTable()
+              .row($(`[data-id1='${userId}']`))
+              .node();
+            var estadoBoton = $(row).find(".estado-boton");
+
+            if (data.is_active == 1) {
+              estadoBoton.text("Desactivar");
+              $(row).find(".btnDeleEqui").removeClass("btn-success").addClass("btn-danger");
+            } else {
+              estadoBoton.text("Activar");
+              $(row).find(".btnDeleEqui").removeClass("btn-danger").addClass("btn-success");
+            }
+            location.reload();
+          } else {
+            alert("Error al cambiar el estado");
+          }
+        })
+        .catch((error) => console.error("Error:", error));
+    }
+
+    // Inicialización de la tabla de áreas
+    $("#tableAreas").DataTable({
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json",
+      },
+      pageLength: 25,
+      order: [],
+      columnDefs: [
+        {
+          targets: -1,
+          data: null,
+          defaultContent:
+            '<div class="dropdown card-widgets">' +
+            '<a href="#" class="dropdown-toggle arrow-none" data-bs-toggle="dropdown">' +
+            '<i class="uil uil-ellipsis-h"></i></a>' +
+            '<div class="dropdown-menu dropdown-menu-end">' +
+            '<a href="javascript:void(0);" class="dropdown-item btnEditArea">' +
+            '<i class="uil uil-edit me-1"></i>Editar</a>' +
+            '<a href="javascript:void(0);" class="dropdown-item btnDeleteArea">' +
+            '<i class="uil uil-trash-alt me-1"></i>Eliminar</a>' +
+            "</div></div>",
+        },
+      ],
+      drawCallback: function () {
+        $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
+      },
+    });
+  });
+
+
+  // Editar área
+  $(document).on("click", ".btnEditArea", function () {
+    event.preventDefault(); // Evitar recarga
+    let fila = $(this).closest("tr");
+    let id = fila.attr("data-id");
+    let codigo = fila.find("td:eq(1)").text().trim();
+    let nombre = fila.find("td:eq(2)").text().trim();
+    $("#mdlEditArea").modal("show");
+    $("#editAreaId").val(id);
+    $("#editCodArea").val(codigo);
+    $("#editNomArea").val(nombre);
+  });
+
+  $(document).on("click", ".btnDeleteArea", function () {
+    if (confirm("¿Estás seguro de eliminar esta área?")) {
+      let fila = $(this).closest("tr");
+      let id = fila.attr("data-id");
+
+      $.ajax({
+        url: "/delete_area/" + id + "/", // 🔥 Pasar ID en la URL
+        type: "POST",
+        data: {
+          csrfmiddlewaretoken: "{{ csrf_token }}",
+        },
+        success: function (response) {
+          location.reload();
+        },
+        error: function () {},
+      });
+    }
+  });
+</script>
+<script>
+  $(document).ready(function () {
+    let chart = new OrgChart("#tree", {
+      nodeBinding: {
+        field_0: "name",
+        field_1: "title",
+      },
+      template: "ula",
+    });
+
+    chart.load([
+      { id: 1, name: "Ing. Richard", title: "CEO" },
+      { id: 2, pid: 1, name: "Betci", title: "Administración" },
+      { id: 4, pid: 2, name: "Jorge", title: "Automatización y Sistemas" },
+      { id: 5, pid: 2, name: "", title: "Ventas y Gestión" },
+    ]);
+  });
+</script>
+{% endblock %}

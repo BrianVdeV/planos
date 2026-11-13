@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Equipo{% endblock title %}
+{% block content %}
+
+<!-- start page title -->
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">Equipo</h4>
+    </div>
+  </div>
+</div>
+<!-- end page title -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+            <table id="table" class="table dt-responsive nowrap w-100">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Nombres</th>
+                  <th>Apellidos</th>
+                  <th>DNI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {%for colaborador in colaboradores%}
+                <tr>
+                  <td>{{ colaborador.username }}</td>
+                  <td>{{ colaborador.first_name }}</td>
+                  <td>{{ colaborador.last_name }}</td>
+                  <td></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block page_js %}
+<script>
+  $(document).ready(function () {
+    $("#table").DataTable({
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json",
+      },
+      pageLength: 25,
+      order: [],
+      drawCallback: function () {
+        $(".dataTables_paginate > .pagination").addClass("pagination-rounded");
+      },
+    });
+  });
+</script>
+{% endblock %}

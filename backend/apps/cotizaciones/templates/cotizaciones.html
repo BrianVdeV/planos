@@ -1,0 +1,421 @@
+{% extends 'base.html' %}
+
+{% block title %}Cotizaciones{% endblock title %} 
+
+{% block vendor_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+{% endblock vendor_css %} 
+
+{% block vendor_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% endblock vendor_js %} 
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <h4 class="page-title">
+        Gestión de Cotizaciones
+      </h4>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-sm-6">
+          </div>
+          <div class="col-sm-6">
+            <div class="text-sm-end">
+              <button id="btnExport" class="btn btn-success mb-2" type="button">
+                <i class="mdi mdi-file-excel"></i> Exportar
+              </button>
+              <button id="btnFiltro" class="btn btn-outline-primary mb-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                <i class="mdi mdi-filter-variant"></i> Filtros
+                <span id="badgeFiltros" class="badge bg-light text-dark ms-1 d-none">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <table class="table table-sm table-hover w-100" id="table-cotizaciones">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Estado</th>
+              <th>Nombre Proyecto</th>
+              <th>Cliente</th>
+              <th>Teléfono</th> 
+              <th>Monto</th>    
+              <th>Ubicación</th>
+              <th>Creado Por</th>
+              <th>Fecha</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mdlEditCotizacion" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Editar Cotización</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+      </div>
+      <form id="formEditCotizacion">
+        <div class="modal-body">
+          <input type="hidden" id="editId" name="id">
+
+          <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="editNombre" class="form-label">Nombre del Proyecto (Tipo)</label>
+                    <input type="text" class="form-control" id="editNombre" name="nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label for="editCliente" class="form-label">Cliente</label>
+                    <input type="text" class="form-control" id="editCliente" name="cliente">
+                </div>
+                <div class="mb-3">
+                    <label for="editDni" class="form-label">DNI / RUC</label>
+                    <input type="text" class="form-control" id="editDni" name="dni">
+                </div>
+                <div class="mb-3">
+                    <label for="editTelefono" class="form-label">Teléfono</label>
+                    <input type="text" class="form-control" id="editTelefono" name="telefono">
+                </div>
+                <div class="mb-3">
+                    <label for="editUbicacion" class="form-label">Ubicación</label>
+                    <input type="text" class="form-control" id="editUbicacion" name="ubicacion">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="editEstado" class="form-label">Estado</label>
+                    <select class="form-select" id="editEstado" name="estado">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="aprobado">Aprobado</option>
+                        <option value="plantilla">Plantilla</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="editArea" class="form-label">Área (m2)</label>
+                    <input type="text" class="form-control" id="editArea" name="area">
+                </div>
+                <div class="mb-3">
+                    <label for="editPisos" class="form-label">Pisos</label>
+                    <input type="text" class="form-control" id="editPisos" name="pisos">
+                </div>
+                <div class="mb-3">
+                    <label for="editElaboracion" class="form-label">Días Elaboración</label>
+                    <input type="number" class="form-control" id="editElaboracion" name="elaboracion">
+                </div>
+                <div class="mb-3">
+                    <label for="editFecha" class="form-label">Fecha Creación</label>
+                    <input type="text" class="form-control" id="editFecha" readonly disabled>
+                </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="editTitulo" class="form-label">Título</label>
+            <input type="text" class="form-control" id="editTitulo" name="titulo">
+          </div>
+
+          <div class="mb-3">
+            <label for="editDetalles" class="form-label">Detalles</label>
+            <textarea class="form-control" id="editDetalles" name="detalles" rows="3"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="editObservaciones" class="form-label">Observaciones</label>
+            <textarea class="form-control" id="editObservaciones" name="observaciones" rows="2"></textarea>
+          </div>
+
+          <hr>
+          <h5>Cuotas (Editable)</h5>
+          <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle">
+                  <thead class="table-light">
+                      <tr>
+                          <th style="width: 150px;">Fecha</th>
+                          <th>Descripción</th>
+                          <th style="width: 150px;">Monto (S/)</th>
+                      </tr>
+                  </thead>
+                  <tbody id="tablaCuotasBody"></tbody>
+              </table>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% include 'partials/_offcanvas/filter_cotizaciones.html' %}
+{% endblock %} 
+
+{% block page_js %}
+<script>
+  const estadoMap = {
+    pendiente: { text: "Pendiente", color: "warning" },
+    aprobado: { text: "Aprobado", color: "success" },
+    plantilla: { text: "Plantilla", color: "info" },
+  };
+
+  $(document).ready(function () {
+
+    const table = $("#table-cotizaciones").DataTable({
+      language: { url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json" },
+      pageLength: 50,
+      order: [[8, "desc"]], 
+      processing: true,
+      serverSide: true,
+      rowId: "id",
+      ajax: {
+        url: "{% url 'cotizacion-list' %}?format=datatables",
+        data: function (d) {
+          d.usuario = $("#usuario").val();
+          d.fecha_inicio = $("#fecha_inicio").val();
+          d.fecha_fin = $("#fecha_fin").val();
+        },
+      },
+      columns: [
+        { data: "id" },
+        {
+          data: "estado",
+          render: function (data) {
+            const estado = estadoMap[data] || { text: data, color: "secondary" };
+            return `<span class="badge bg-${estado.color}">${estado.text}</span>`;
+          },
+        },
+        { 
+            data: "nombre",
+            render: function(data, type, row) {
+                // Muestra Nombre en azul y Título abajo en gris
+                return `<span class="fw-bold text-primary">${data}</span><br><small class="text-muted">${row.titulo || ''}</small>`;
+            }
+        },
+        { data: "cliente" },
+        { data: "telefono", defaultContent: "--" }, 
+        { 
+            data: "total", 
+            render: function(data) { return data ? `S/ ${parseFloat(data).toFixed(2)}` : 'S/ 0.00'; },
+            className: "text-end fw-bold text-success",
+            orderable: false, searchable: false   
+        },
+        { data: "ubicacion" },
+        {
+          data: "user",
+          name: "user__username",
+          render: function (data) {
+            if (data) {
+                let nombreMostrar = data.username;
+                let inicial = nombreMostrar.charAt(0).toUpperCase();
+                return `<div class="d-flex align-items-center"><div class="avatar-xs me-2"><span class="avatar-title rounded-circle bg-primary text-white" style="width: 24px; height: 24px; font-size: 12px;">${inicial}</span></div><span class="text-nowrap">${nombreMostrar}</span></div>`;
+            }
+            return '<span class="text-muted">Sistema</span>';
+          },
+        },
+        {
+          data: "fecha",
+          render: function (data) { return data ? moment(data).format("DD/MM/YYYY") : ""; },
+        },
+        {
+          data: null,
+          orderable: false, 
+          searchable: false,
+          className: "text-end",
+          render: function(data, type, row) {
+             return `
+            <div class="dropdown">
+              <a href="#" class="dropdown-toggle arrow-none card-drop" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="mdi mdi-dots-vertical"></i>
+              </a>
+              <div class="dropdown-menu dropdown-menu-end">
+                <a href="javascript:void(0);" class="dropdown-item text-primary edit-cotizacion">
+                    <i class="mdi mdi-pencil me-1"></i>Editar
+                </a>
+                <a href="javascript:void(0);" class="dropdown-item text-danger delete-cotizacion">
+                    <i class="mdi mdi-trash-can me-1"></i>Eliminar
+                </a>
+              </div>
+            </div>`;
+          }
+        },
+      ],
+    });
+
+    function actualizarBadgeFiltros() {
+      let filtrosActivos = 0;
+      if ($("#usuario").val() !== "") filtrosActivos++;
+      if ($("#fecha_inicio").val() !== "") filtrosActivos++;
+      if ($("#fecha_fin").val() !== "") filtrosActivos++;
+      const badge = document.getElementById("badgeFiltros");
+      const boton = document.getElementById("btnFiltro");
+      if (filtrosActivos > 0) {
+        badge.textContent = filtrosActivos;
+        badge.classList.remove("d-none");
+        boton.classList.remove("btn-outline-primary");
+        boton.classList.add("btn-primary");
+      } else {
+        badge.classList.add("d-none");
+        boton.classList.remove("btn-primary");
+        boton.classList.add("btn-outline-primary");
+      }
+    }
+    
+    actualizarBadgeFiltros();
+
+    $('#btnAplicarFiltro').on('click', function() {
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnLimpiarFiltro').on('click', function () {
+      $('#usuario').val('');
+      $('#fecha_inicio').val('');
+      $('#fecha_fin').val('');
+      actualizarBadgeFiltros();
+      table.ajax.reload();
+      bootstrap.Offcanvas.getInstance(document.getElementById("offcanvasRight")).hide();
+    });
+
+    $('#btnExport').on('click', function() {
+      var params = table.ajax.params();
+      var queryString = $.param(params);
+      var urlExcel = "{% url 'cotizacion-list' %}?format=xlsx&" + queryString;
+      window.open(urlExcel, '_blank');
+    });
+    
+    $('#table-cotizaciones tbody').on('click', '.edit-cotizacion', function () {
+        const tr = $(this).closest('tr');
+        const row = table.row(tr).data(); 
+        const id = row.id;
+
+        $.ajax({
+            url: `../api/cotizaciones/${id}/`,
+            type: "GET",
+            success: function(data) {
+                $("#editId").val(data.id);
+                $("#editNombre").val(data.nombre);
+                $("#editCliente").val(data.cliente);
+                $("#editDni").val(data.dni);
+                $("#editTelefono").val(data.telefono);
+                $("#editUbicacion").val(data.ubicacion);
+                $("#editEstado").val(data.estado);
+                $("#editArea").val(data.area);
+                $("#editPisos").val(data.pisos);
+                $("#editElaboracion").val(data.elaboracion);
+                $("#editTitulo").val(data.titulo);
+                $("#editDetalles").val(data.detalles);
+                $("#editObservaciones").val(data.observaciones);
+                $("#editFecha").val(data.fecha); 
+
+                const tbody = $("#tablaCuotasBody");
+                tbody.empty(); 
+                
+                if (data.cuotas && data.cuotas.length > 0) {
+                    data.cuotas.forEach((cuota) => {
+                        tbody.append(`
+                            <tr data-id="${cuota.id}" class="fila-cuota">
+                                <td>
+                                    <input type="date" class="form-control form-control-sm input-fecha" value="${cuota.fecha}">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm input-desc" value="${cuota.descripcion}">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">S/</span>
+                                        <input type="number" step="0.01" class="form-control input-monto" value="${parseFloat(cuota.monto).toFixed(2)}">
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    tbody.append('<tr><td colspan="3" class="text-center text-muted">No hay cuotas registradas</td></tr>');
+                }
+
+                var myModal = new bootstrap.Modal(document.getElementById('mdlEditCotizacion'));
+                myModal.show();
+            },
+            error: function() {
+                $.NotificationApp.send("Error", "No se pudieron cargar los datos", "bottom-right", "rgba(0,0,0,0.2)", "error");
+            }
+        });
+    });
+
+    $("#formEditCotizacion").on("submit", function(e){
+        e.preventDefault();
+        const id = $("#editId").val();
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        const cuotasArray = [];
+        $(".fila-cuota").each(function() {
+            const row = $(this);
+            cuotasArray.push({
+                id: row.data("id"), 
+                fecha: row.find(".input-fecha").val(),
+                descripcion: row.find(".input-desc").val(),
+                monto: row.find(".input-monto").val()
+            });
+        });
+        data.cuotas = cuotasArray;
+
+        $.ajax({
+            url: `../api/cotizaciones/${id}/`, 
+            type: "PATCH", 
+            contentType: "application/json",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+            data: JSON.stringify(data),
+            success: function(response) {
+                var myModalEl = document.getElementById('mdlEditCotizacion');
+                var modal = bootstrap.Modal.getInstance(myModalEl);
+                modal.hide();
+                $.NotificationApp.send("¡Actualizado!", "La cotización y sus cuotas han sido editadas.", "bottom-right", "rgba(0,0,0,0.2)", "success");
+                table.ajax.reload(null, false);
+            },
+            error: function(xhr) {
+                $.NotificationApp.send("Error", "No se pudo guardar: " + xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+            }
+        });
+    });
+
+    $(document).on("click", ".delete-cotizacion", function (e) {
+      e.preventDefault();
+      const id = $(this).closest("tr").attr("id");
+      if (confirm("¿Confirma que desea eliminar este expediente?")){
+        $.ajax({
+          url: `../api/cotizaciones/${id}/`,
+          method: "DELETE",
+          headers: { "X-CSRFToken": "{{ csrf_token }}" },
+          success: function (response) {
+            table.ajax.reload();
+            $.NotificationApp.send("¡Bien hecho!", "Cotización eliminada", "bottom-right", "rgba(0,0,0,0.2)", "success");
+          },
+          error: function (xhr) {
+            $.NotificationApp.send("¡Error!", xhr.responseText, "bottom-right", "rgba(0,0,0,0.2)", "error");
+          },
+        });
+      }
+    });
+  });
+</script>
+{% endblock %}

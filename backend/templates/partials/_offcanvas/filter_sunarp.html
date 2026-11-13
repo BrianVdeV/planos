@@ -1,0 +1,24 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+  <div class="offcanvas-body">
+    <div class="mb-3">
+      <label for="simpleinput" class="form-label">Estado</label>
+      <select class="form-select" id="estado_filter">
+        <option value="">Todos</option>
+        {% for estado,color in estados.items %}
+        <option value="{{ estado }}">{{ estado }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="simpleinput" class="form-label">Estado OT</label>
+      <select name="ot_estado" class="form-select" id="ot_estado_filter">
+        <option value="">Todos</option>
+        <option value="Activo" selected>Activo</option>
+        <option value="Finalizado">Finalizado</option>
+        <option value="Suspendido">Suspendido</option>
+      </select>
+    </div>
+    <button id="btnAplicarFiltro" class="btn btn-primary">Aplicar filtros</button>
+    <button id="btnLimpiarFiltro" class="btn btn-outline-secondary">Limpiar filtros</button>
+  </div>
+</div>

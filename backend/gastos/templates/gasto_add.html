@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load l10n %}
+{% block title %}Crear Reporte{% endblock title %}
+
+{% block vendor_css %}
+<link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+{% endblock vendor_css %}
+
+{% block vendor_js %}
+<script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box d-flex justify-content-between align-items-center">
+      <h4 class="page-title">Crear Gastos</h4>
+      <a href="https://conoce.planosperu.com.pe/doc/reporte-de-gastos-Pwa56vEggw" class="btn btn-info btn-sm">
+        <i class="mdi mdi-help-circle me-1"></i> Ayuda
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        
+        <form method="POST" action="{% url 'guardar_gasto' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+          <div class="row">
+            <div class="col-lg-8" id="gastos-list-container">    
+              <div class="gasto-item card">
+                <div class="card-body">
+                  <div class="card-widgets">
+                    <a href="#" class="delete-row"><i class="mdi mdi-close"></i></a>
+                  </div>
+                  <h5 class="card-title mb-0 gasto-numero">1</h5>
+                  
+                  <div class="row gx-2">
+                    
+                    <div class="col-md-4 mb-md-0 mb-2">
+                      <label for="selectOT" class="form-label">OT</label>
+                      <select name="sltOT[]" class="form-select mb-2" id="selectOT">
+                        <option value="">OT (Opcional)</option>
+                        {% for ot in ots %}
+                        <option value="{{ ot.id }}">{{ ot }}</option>
+                        {% endfor %}
+                      </select>
+                      <textarea class="form-control" name="txtDescripcion[]" id="inputDescripcion" rows="2" placeholder="Ej: Moto de Oficina a SUNARP"></textarea>
+                    </div>
+
+                    <div class="col-md-3 mb-md-0 mb-2">
+                      <label for="selectCategoria" class="form-label">Categoría</label>
+                      <select class="form-select mb-2" name="sltCategoria[]" id="selectCategoria">
+                        <option value="Firma">Firma</option>
+                        <option value="Movilidad">Movilidad</option>
+                        <option value="Municipalidad">Municipalidad</option>
+                        <option value="Notaria">Notaría</option>
+                        <option value="Oficina">Oficina</option>
+                        <option value="Sunarp">Sunarp</option>
+                        <option value="Taxi">Taxi</option>
+                        <option value="Otros" selected>Otros</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-3 mb-md-0 mb-2">
+                        <label class="form-label">Comprobante</label>
+                        <input type="file" class="form-control" name="fileArchivo[]" accept="image/*,.pdf">
+                        <small class="text-muted" style="font-size: 10px;">Captura Yape/Foto</small>
+                    </div>
+
+                    <div class="col-md-2 mb-md-0 mb-2">
+                      <label for="inputMonto" class="form-label">Monto (S/)</label>
+                      <input type="number" class="form-control monto" name="txtMonto[]" id="inputMonto" step="0.01" placeholder="0.00" />
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+              
+              <div class="text-end mt-2" id="add-row-container">
+                <button type="button" id="addRow" class="btn btn-link fw-semibold">
+                  <i class="ri-add-circle-line me-1"></i> Agregar Otro Gasto
+                </button>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="border p-3 mt-4 mt-lg-0 rounded bg-white"> 
+                <h4 class="header-title mb-3">Reporte de Gastos</h4>
+                <div class="table-responsive">
+                  <table class="table mb-0">
+                    <tbody>
+                      <tr>
+                        <td>Fecha del Gasto:</td>
+                        <td>
+                          <input type="date" class="form-control" id="fechaGeneral" name="fechaGeneral" value="{{ hoy }}" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Saldo disponible:</td>
+                        <td>
+                          <input type="number" class="form-control" name="saldoInicial" id="saldoInicial" step="0.01" value="{{ saldo_usuario|unlocalize }}" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Total:</td>
+                        <td>
+                          <input type="text" readonly class="form-control-plaintext" name="totalMonto" id="totalMonto" value="0.00" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Vuelto:</th>
+                        <th>
+                          <input type="text" readonly class="form-control-plaintext" name="diferenciaMonto" id="diferenciaMonto" value="0.00" />
+                        </th>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="text-sm-end mb-2"> 
+                  <button type="submit" class="btn btn-primary w-100" id="btnGuardarGastos">
+                    <i class="mdi mdi-cart-plus me-1"></i> Guardar Gastos
+                  </button>
+                </div>
+                <div class="text-center"> 
+                  <a href="../gastos/" class="btn text-muted d-none d-sm-inline-block btn-link fw-semibold">
+                    <i class="mdi mdi-arrow-left"></i> Ver la Lista de Gastos
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  function actualizarNumerosDeGasto() {
+    $('#gastos-list-container .gasto-item').each(function(index) {
+      $(this).find('.gasto-numero').text(index + 1);
+    });
+  }
+  
+  function calcularTotal() {
+    let total = 0;
+    $("input[name='txtMonto[]']").each(function () {
+        let monto = parseFloat($(this).val()) || 0;
+        total += monto;
+    });
+
+    $("#totalMonto").val(total.toFixed(2));
+    let saldoInicial = parseFloat($("#saldoInicial").val()) || 0;
+    let diferencia = saldoInicial - total;
+    $("#diferenciaMonto").val(diferencia.toFixed(2));
+  }
+
+  $(document).ready(function () {
+    calcularTotal();
+    
+    $("#addRow").click(function () {
+      // Clonar la primera fila
+      let nuevaFila = $("#gastos-list-container .gasto-item:first").clone();
+      
+      // Limpiar inputs de texto, selects y textareas
+      nuevaFila.find("input, select, textarea").val("");  
+      
+      // IMPORTANTE: Limpiar el input de archivo para que no copie la imagen de la fila anterior
+      nuevaFila.find("input[type='file']").val(""); 
+
+      // Resetear valores por defecto
+      nuevaFila.find('select[name="sltCategoria[]"]').val("Otros");
+      
+      // Insertar la nueva fila antes del botón de agregar
+      $("#add-row-container").before(nuevaFila); 
+      
+      // Poner el foco en el primer campo
+      nuevaFila.find('select[name="sltOT[]"]').focus();
+      
+      actualizarNumerosDeGasto();
+    });
+
+    $(document).on("click", ".delete-row", function () {
+        let totalFilas = $("#gastos-list-container .gasto-item").length; 
+        if (totalFilas > 1) {
+            $(this).closest(".gasto-item").remove();
+            calcularTotal();
+            actualizarNumerosDeGasto();
+        } else {
+            alert("Debe haber al menos una fila en la tabla.");
+        }
+    });
+
+    $(document).on("input", "input[name='txtMonto[]']", calcularTotal);
+    $(document).on("input", "#saldoInicial", calcularTotal);
+  });
+
+  document.querySelector("form").addEventListener("submit", function () {
+    // Asegurarse de que los valores calculados estén correctos antes de enviar
+    let total = parseFloat(document.getElementById("totalMonto").value) || 0;
+    let diferencia = parseFloat(document.getElementById("diferenciaMonto").value) || 0;
+    
+    // Si tienes inputs ocultos específicos, actualízalos aquí, pero con el HTML actual 
+    // los inputs readonly ya se envían en el POST.
+  });
+</script>
+{% endblock %}

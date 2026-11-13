@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Resumen de Proyectos{% endblock %}
+
+{% block vendor_js %}
+<script src="{% static 'vendor/daterangepicker/moment.min.js' %}"></script>
+<script src="{% static 'vendor/daterangepicker/daterangepicker.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+{% endblock vendor_js %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box">
+            <h4 class="page-title">Dashboard de Resumen de Actividad</h4>
+        </div>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Rango de Fechas</label>
+                        <div class="input-group">
+                            <input class="form-control form-control-light" type="text" id="daterange_textbox" />
+                            <span class="input-group-text bg-primary border-primary text-white">
+                                <i class="mdi mdi-calendar-range font-13"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar (Usuario, Tarea, OT)</label>
+                        <input type="text" id="customSearchInput" class="form-control" placeholder="Escribe para filtrar gráficos...">
+                    </div>
+
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                        <button type="button" id="btnExportarExcel" class="btn btn-success">
+                            <i class="mdi mdi-file-excel me-1"></i> Exportar a Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="header-title mb-4">1. Horas Registradas (Tareas Realizadas)</h4>
+                <div dir="ltr">
+                    <div id="chart"></div> </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h4 class="header-title mb-4">3. Línea de Tiempo Completa (Actividad vs Inactividad)</h4>
+                <p class="text-muted font-13">Visualización de qué tarea se realizaba y cuándo ocurrieron las pausas.</p>
+                <div dir="ltr">
+                     <div id="chart-combinado" style="min-height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+    // Variables globales para fechas
+    let start_date = moment().startOf("week").format("YYYY-MM-DD");
+    let end_date = moment().endOf("week").format("YYYY-MM-DD");
+    
+    // Instancias de gráficos
+    let chartInstance = null;         // Gráfico 1 (Original)
+    let chartMuertosInstance = null;  // Gráfico 2 (Nuevos huecos)
+    let chartCombinadoInstance = null;// Gráfico 3 (Timeline)
+
+    $(document).ready(function () {
+        let searchValue = ""; 
+
+        // 1. Inicializar DateRangePicker
+        $("#daterange_textbox").daterangepicker(
+            {
+                ranges: {
+                    "Esta semana": [moment().startOf("week"), moment().endOf("week")],
+                    "La semana pasada": [
+                        moment().subtract(1, "week").startOf("week"),
+                        moment().subtract(1, "week").endOf("week").subtract(0, "days"),
+                    ],
+                    "Este Mes": [moment().startOf("month"), moment().endOf("month")],
+                },
+                locale: {
+                    format: "DD/MM/YYYY",
+                    separator: " - ",
+                    applyLabel: "Aplicar",
+                    cancelLabel: "Cancelar",
+                    fromLabel: "Desde",
+                    toLabel: "Hasta",
+                    customRangeLabel: "Personalizado",
+                    weekLabel: "S",
+                    daysOfWeek: ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"],
+                    monthNames: [
+                        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+                    ],
+                    firstDay: 0,
+                },
+                alwaysShowCalendars: true,
+                showCustomRangeLabel: false,
+                opens: "left",
+                autoApply: true,
+                format: "YYYY-MM-DD",
+                startDate: moment().startOf("week"),
+                endDate: moment().endOf("week"),
+            },
+            function (start, end) {
+                start_date = start.format("YYYY-MM-DD");
+                end_date = end.format("YYYY-MM-DD");
+                actualizarTodosLosGraficos();
+            }
+        );
+
+        // 2. Evento del Buscador Manual
+        $("#customSearchInput").on("input", function () {
+            searchValue = $(this).val();
+            actualizarTodosLosGraficos(); 
+        });
+
+        // 3. Evento del Botón Exportar Excel
+        $("#btnExportarExcel").on("click", function() {
+            let currentSearch = $("#customSearchInput").val();
+            let params = $.param({
+                start_date: start_date,
+                end_date: end_date,
+                search_value: currentSearch
+            });
+            window.location.href = "{% url 'exportar_resumen_excel' %}?" + params;
+        });
+
+        // Carga Inicial
+        actualizarTodosLosGraficos();
+
+        // Función Maestra
+        function actualizarTodosLosGraficos() {
+            let sv = $("#customSearchInput").val();
+            fetch_chart_tareas(start_date, end_date, sv);   // Tu gráfico original
+            fetch_chart_combinado(start_date, end_date, sv);// Gráfico Timeline Horizontal
+        }
+    });
+
+    // ========================================================
+    // GRÁFICO 1: TU LÓGICA ORIGINAL (RESTAURADA)
+    // ========================================================
+    function fetch_chart_tareas(start_date, end_date, searchValue) {
+        $.ajax({
+            url: '{% url "chart" %}',
+            type: 'GET',
+            data: { start_date: start_date, end_date: end_date, "search[value]": searchValue },
+            dataType: 'json',
+            success: function (data) {
+                var options = {
+                    series: data.datasets.map(ds => {
+                        return {
+                            name: ds.label,
+                            data: ds.data,
+                            data_label: ds.data_label 
+                        };
+                    }),
+                    chart: {
+                        type: 'bar',
+                        height: 400,
+                        stacked: true, // Barras apiladas
+                        toolbar: {
+                            show: true 
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            dataLabels: {
+                                total: {
+                                    enabled: true,  // Habilita los totales
+                                    formatter: function (val, opts) {
+                                        let totalText = data.totals[opts.dataPointIndex] || "";
+                                        return totalText === "0:00" ? "" : totalText; // Oculta los "0h 0m"
+                                    },
+                                    style: {
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        colors: ['#000']  // Color negro para los totales
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false  // Desactiva los números en cada barra individual
+                    },
+                    colors: data.datasets.map(ds => ds.backgroundColor), // Colores dinámicos
+                    xaxis: {
+                        categories: data.labels.map(dateStr => {
+                            const [year, month, day] = dateStr.split('-');
+                            const date = new Date(Number(year), Number(month) - 1, Number(day));
+                            const diaSemana = date.toLocaleDateString('es', { weekday: 'short' }); // dom.
+                            const mes = date.toLocaleDateString('es', { month: 'short' }); // mar.
+                            const dia = day.padStart(2, '0'); // 02
+                            return `${diaSemana}., ${mes}. ${dia}`;
+                        }),
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: function (value) {
+                                return value.toFixed(2); // Redondear valores en el eje Y
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'right', // Mueve la leyenda a la derecha
+                        offsetY: 40
+                    },
+                    tooltip: {
+                        enabled: true,
+                        shared: false, // Evita mostrar varios valores en un solo tooltip
+                        custom: function({ seriesIndex, dataPointIndex, w }) {
+                            let tiempoTexto = w.config.series[seriesIndex].data_label?.[dataPointIndex] ?? "0:00";
+                            let color = w.config.colors[seriesIndex]; // Obtiene el color de la serie
+                            return `<div style="display: flex; align-items: center; padding: 5px;">
+                                      <span style="width: 12px; height: 12px; border-radius: 50%; background-color: ${color}; display: inline-block; margin-right: 5px;"></span>
+                                      <span>${w.globals.seriesNames[seriesIndex]}: ${tiempoTexto}</span>
+                                    </div>`;
+                        }
+                    }
+                };
+                if (window.chartInstance) {
+                    window.chartInstance.destroy();
+                }
+                window.chartInstance = new ApexCharts(document.querySelector("#chart"), options);
+                window.chartInstance.render();
+            },
+            error: function (xhr, status, error) {
+                console.error("Error al obtener datos del gráfico 1:", error);
+            }
+        });
+    }
+
+    // --------------------------------------------------------
+    // GRÁFICO 3: Horizontal Semanal (Estilo Gantt / Timeline)
+    // --------------------------------------------------------
+    function fetch_chart_combinado(start, end, search) {
+        $.ajax({
+            url: '{% url "chart_combinado" %}',
+            type: 'GET',
+            data: { 
+                start_date: start, 
+                end_date: end, 
+                "search[value]": search 
+            },
+            dataType: 'json',
+            success: function (realData) {
+                
+                var options = {
+                    series: [
+                        {
+                            name: 'Actividad',
+                            data: realData 
+                        }
+                    ],
+                    chart: {
+                        type: 'rangeBar',
+                        height: 350, // Altura del gráfico
+                        toolbar: { show: true }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: true, // <--- VOLVEMOS A HORIZONTAL
+                            barHeight: '50%', // Grosor de la barra
+                            rangeBarGroupRows: true // Mantiene los bloques en la misma línea del día
+                        }
+                    },
+                    dataLabels: { enabled: false },
+                    
+                    // EJE X (ABAJO): Ahora es el TIEMPO
+                    xaxis: {
+                        type: 'datetime', 
+                        labels: {
+                            formatter: function(val) {
+                                // Formatear timestamps a hora legible (ej: 09:00 AM)
+                                return new Date(val).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            }
+                        }
+                    },
+                    
+                    // EJE Y (IZQUIERDA): Ahora son los DÍAS
+                    yaxis: {
+                        labels: {
+                            style: { fontWeight: 'bold', fontSize: '12px' }
+                        }
+                    },
+                    
+                    fill: {
+                        type: 'solid',
+                        opacity: 1
+                    },
+                    grid: {
+                        xaxis: {
+                            lines: { show: true } // Muestra líneas verticales para ver mejor las horas
+                        },
+                        yaxis: {
+                            lines: { show: true }
+                        }
+                    },
+                    tooltip: {
+                        custom: function(opts) {
+                            const fromYear = opts.y1;
+                            const toYear = opts.y2;
+                            const w = opts.ctx.w;
+                            const dataPoint = w.config.series[opts.seriesIndex].data[opts.dataPointIndex];
+                            
+                            const startH = new Date(fromYear).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            const endH = new Date(toYear).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            const diffMins = Math.round((toYear - fromYear) / 60000);
+                            
+                            const usuario = dataPoint.usuario ? `<i>(${dataPoint.usuario})</i>` : '';
+
+                            return (
+                                '<div class="apexcharts-tooltip-rangebar" style="padding:10px;">' +
+                                '<div><b style="color: ' + dataPoint.fillColor + '">' + 
+                                (dataPoint.meta ? dataPoint.meta : "Evento") + 
+                                '</b> ' + usuario + '</div>' +
+                                '<div>' + startH + ' - ' + endH + ' (' + diffMins + ' min)</div>' +
+                                '</div>'
+                            );
+                        }
+                    },
+                    legend: { show: false }
+                };
+
+                if (window.chartCombinadoInstance) window.chartCombinadoInstance.destroy();
+                window.chartCombinadoInstance = new ApexCharts(document.querySelector("#chart-combinado"), options);
+                window.chartCombinadoInstance.render();
+            },
+            error: function (xhr, status, error) {
+                console.error("Error cargando timeline real:", error);
+            }
+        });
+    }
+
+</script>
+{% endblock %}

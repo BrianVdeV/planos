@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Proyectos{% endblock title %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="page-title-box">
+      <div class="page-title-right">
+        <ol class="breadcrumb m-0">
+          <li class="breadcrumb-item"><a href="{% url "index" %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Proyectos</li>
+        </ol>
+      </div>
+      <h4 class="page-title">Proyectos</h4>
+    </div>
+  </div>
+</div>
+<div class="row mb-2">
+  <div class="col-sm-4">
+    {% if user.is_superuser %}
+      <a data-bs-target="#mdlCreate" data-bs-toggle="modal" class="btn btn-danger rounded-pill mb-3">
+          <i class="mdi mdi-plus"></i> Crear nuevo proyecto
+      </a>
+    {% endif %}
+  </div>
+  <div class="col-sm-8">
+    <div class="text-sm-end">
+        <div class="btn-group mb-3">
+            <button type="button" class="btn btn-light btn-filtro" data-estado="">Todos</button>
+        </div>
+        <div class="btn-group mb-3 ms-1">
+            <button type="button" class="btn btn-primary btn-filtro" data-estado="Activo">Activos</button>
+            <button type="button" class="btn btn-light btn-filtro" data-estado="Finalizado">Finalizados</button>
+        </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <table id="table" class="table table-sm tb-hover dt-responsive w-100">
+          <thead>
+            <tr>
+              <th>OT</th>
+              <th>Avance</th>
+              <th>Inicio</th>
+              <th>Titulo</th>
+              <th>Estado Tit.</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include 'partials/_modals/modal_add_proyecto.html' %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static "js/pages/ots.js" %}"></script>
+<script>
+  const baseProyectoUrl = "{% url 'proyecto_detalle' 0 %}".replace("/0/", "/");
+
+  // CAMBIO 3: Inicializamos la variable con "Activo" en lugar de vacío ""
+  let estadoFiltro = "Activo"; 
+
+  $(document).ready(function () {
+    let table = $("#table").DataTable({
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/2.2.1/i18n/es-MX.json",
+      },
+      pageLength: 50,
+      serverSide: true,
+      processing: true,
+      ordering: true,
+      order: [[0, "desc"]],
+      ajax: {
+        url: "../api/ot-list/",
+        data: function (d) {
+          // Aquí se enviará "Activo" en la primera carga
+          d.estado = estadoFiltro;
+        },
+      },
+      columns: [
+        {
+          data: "id_str",
+          render: function (data, type, row) {
+            return `<a class="text-muted" href="${baseProyectoUrl}${row.id}/">
+            <i class="mdi mdi-record" style="color: ${row.color}"></i> ${data}</a>`;
+          },
+        },
+        {
+          data: "avance_estados", 
+          orderable: false, 
+          render: function (data, type, row) {
+            if (!data || data.total === 0) {
+                return `<div class="progress" style="height: 20px;"><div class="progress-bar bg-secondary" role="progressbar" style="width: 100%;"></div></div>`;
+            }
+            const colors = { todo: "bg-secondary", in_progress: "bg-primary", review: "bg-warning", done: "bg-success" };
+            let bars = '';
+            if (data.done > 0) bars += `<div class="progress-bar ${colors.done}" style="width: ${data.done}%" title="Hecho: ${data.done}%"></div>`;
+            if (data.review > 0) bars += `<div class="progress-bar ${colors.review}" style="width: ${data.review}%" title="Rev: ${data.review}%"></div>`;
+            if (data.in_progress > 0) bars += `<div class="progress-bar ${colors.in_progress}" style="width: ${data.in_progress}%" title="Proc: ${data.in_progress}%"></div>`;
+            if (data.todo > 0) bars += `<div class="progress-bar ${colors.todo}" style="width: ${data.todo}%" title="Hacer: ${data.todo}%"></div>`;
+            return `<div class="progress" style="height: 20px;">${bars}</div>`;
+          },
+        },
+        {
+          data: "inicio",
+          render: function (data) { return new Date(data).toLocaleDateString(); },
+        },
+        { data: "expediente_titles" },
+        { 
+          data: "expediente_estado",
+          render: function (data) {
+              if (!data) return '';
+              const color = (typeof colorMapping !== 'undefined' && colorMapping[data]) ? colorMapping[data] : "#6c757d";
+              return `<span class="badge" style="background-color: ${color}; color: white">${data}</span>`;
+          },
+        },
+        {
+          data: "estado",
+          render: function (data) {
+            let badgeClass = data === 'Finalizado' ? 'badge bg-success' : (data === 'Activo' ? 'badge bg-primary' : 'badge bg-secondary');
+            return `<span class="${badgeClass}">${data}</span>`;
+          }
+        },
+      ],
+    });
+
+    $(".btn-filtro").on("click", function () {
+        estadoFiltro = $(this).data("estado"); 
+        table.ajax.reload();
+        // Manejo visual de los botones
+        $(".btn-filtro").removeClass("btn-primary").addClass("btn-light");
+        $(this).removeClass("btn-light").addClass("btn-primary");
+    });
+
+    // ... (El resto de tu código para colores y selects sigue igual) ...
+    const coloresPorCodigo = {
+      "DEC": "#00a5a5",
+      "BUS": "#f56f36",
+      "IND": "#727cf5",
+      "VIS": "#8ec321",
+      "PLA": "#ffaf00",
+      "LIC": "#0acf97",
+    };
+    
+    const colorDefecto = "#e5e5e5";
+
+    $("#txtTipoProyecto").change(function() {
+        const opcionSeleccionada = $(this).find('option:selected');
+        const codigoRaw = opcionSeleccionada.data('codigo'); 
+        
+        console.log("Código seleccionado:", codigoRaw); 
+
+        if (codigoRaw) {
+            const codigo = String(codigoRaw).toUpperCase(); 
+            const inputProyecto = $("#txtProyecto");
+            if(inputProyecto.val() === "" || inputProyecto.val().length < 5) {
+                inputProyecto.val(codigo + "-");
+            }
+            let colorEncontrado = colorDefecto;
+            for (const clave in coloresPorCodigo) {
+                if (codigo.includes(clave)) {
+                    colorEncontrado = coloresPorCodigo[clave];
+                    break;
+                }
+            }
+            $("#txtColor").val(colorEncontrado);
+        } else {
+            $("#txtColor").val(colorDefecto);
+        }
+    });
+
+  });
+</script>
+{% endblock %}

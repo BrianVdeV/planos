@@ -1,0 +1,66 @@
+<div class="modal fade" id="mdlAddMuni" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Crear expediente (Muni/Otros)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="frmAddMuni" autocomplete="off">
+                <div class="modal-body">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">OT</label>
+                        {{ form.ot }} 
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Entidad</label>
+                            <select name="entidad" class="form-select">
+                                <option value="" selected>Seleccione...</option>
+                                <option value="Municipal">Municipal</option>
+                                <option value="Enel">Enel</option>
+                                <option value="Sedapal">Sedapal</option>
+                                <option value="Notarial">Notarial</option>
+                                <option value="Privado">Privado</option>
+                                </select>
+                        </div>
+
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Título / Número</label>
+                            <input type="text" name="numero" class="form-control" placeholder="Ej: 2025-001">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                         <div class="col-md-6 mb-3">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select name="estado" class="form-select" id="estado">
+                                {% for estado,color in estados.items %}
+                                <option value="{{ estado }}">{{ estado }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                         <div class="col-6 mb-3">
+                            <label class="form-label">Presentación</label>
+                            <input type="date" name="presentacion" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                           <label class="form-label">Vencimiento</label>
+                           <input type="date" name="vencimiento" class="form-control">
+                       </div>
+                   </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Crear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
