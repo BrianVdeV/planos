@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@fontsource-variable/nunito";
+
+@layer base {
+  body {
+    font-family: 'Nunito Variable', sans-serif;
+  }
+}
