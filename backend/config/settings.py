@@ -154,26 +154,34 @@ LOGIN_URL = 'login'
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+if DEBUG:
+    MEDIA_URL = config('MEDIA_URL', default='/media/')
+    MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
 
-# MEDIA_URL = config('MEDIA_URL', default='/media/')
-# MEDIA_ROOT = config('MEDIA_ROOT', default=os.path.join(BASE_DIR, 'media'))
-
-
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = 'planos-media'
-AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
-AWS_S3_REGION_NAME = 'us-east-1'
-AWS_S3_FILE_OVERWRITE = False
-
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+    # En Django 4.2+ (por defecto ya es FileSystemStorage, pero puedes ser explícito):
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = 'planos-media'
+    AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = 'us-east-1'
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -206,6 +214,8 @@ CORS_ALLOWED_ORIGINS = ["http://127.0.0.1:8000",
                         "https://planosperu.com.pe",
                         "https://www.planosperu.com.pe",
                         "http://localhost:3000",
+                        "http://localhost:5173",
+                        "http://127.0.0.1:5173",
                         "http://38.25.30.241"
                         ]
 
