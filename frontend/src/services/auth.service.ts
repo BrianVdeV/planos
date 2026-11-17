@@ -28,6 +28,14 @@ export const authService = {
   },
 
   /**
+   * Obtiene el usuario autenticado junto con su colaborador (/api/users/me/)
+   */
+  getMe: async (): Promise<User> => {
+    const { data } = await api.get<User>('/users/me/');
+    return data;
+  },
+
+  /**
    * Lista de usuarios del sistema (/api/users/)
    */
   getUsers: async (params?: Record<string, unknown>): Promise<PaginatedResponse<User> | User[]> => {

@@ -18,6 +18,10 @@ export default defineConfig({
         target: process.env.VITE_BACKEND_PROXY || 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/sidebar': {
+        target: process.env.VITE_BACKEND_PROXY || 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/ws': {
         target: process.env.VITE_WS_PROXY || 'ws://localhost:8000',
         ws: true,

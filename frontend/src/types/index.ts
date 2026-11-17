@@ -26,14 +26,17 @@ export interface Area {
 
 export interface Colaborador {
   id: number;
-  usuario: number;
-  nombres: string;
-  apellidos: string;
-  dni?: string;
-  telefono?: string;
-  correo?: string;
+  user?: number;
+  usuario?: number;
+  nombres?: string;
+  apellidos?: string;
+  dni?: number | string | null;
+  telefono?: string | null;
+  correo?: string | null;
   foto?: string | null;
-  area?: Area | null;
+  area?: number | Area | null;
+  area_nombre?: string | null;
+  puesto?: string | null;
   estado?: boolean;
 }
 
