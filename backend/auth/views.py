@@ -438,6 +438,12 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.filter(is_active=True).order_by('username')
     serializer_class = UserSerializer
 
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Retorna el usuario autenticado junto con los datos de su colaborador"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
 
 class ColaboradorViewSet(viewsets.ModelViewSet):
     """Colaborador"""

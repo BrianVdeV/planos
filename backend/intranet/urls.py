@@ -11,6 +11,7 @@ router.register(r'tipot', api.TipOtViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('api/sidebar/', api.SidebarView.as_view(), name="sidebar"),
     path('api/chart/', api.ChartView.as_view(), name='chart'),
     path('api/chart-combinado/', views.chart_combinado, name='chart_combinado'),
     path('api/jquery-toast/', api.JqueryToastView.as_view(),
@@ -24,7 +25,6 @@ urlpatterns = [
          views.edit_proyecto, name='edit_proyecto'),
     path('proyectos/delete', views.delete_proyecto, name='delete_proyecto'),
     path('proyectos/<int:id>/', views.proyecto_detalle, name='proyecto_detalle'),
-    path('sidebar', api.SidebarView.as_view(), name="sidebar"),
     path('index/api/', views.list_actividades_index,
          name='obtener_actividades_index'),
 ]

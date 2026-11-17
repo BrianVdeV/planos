@@ -3,6 +3,16 @@ from django.contrib.auth.models import User
 from .models import Area, Colaborador
 
 
+class ColaboradorSerializer(serializers.ModelSerializer):
+    """Serializer"""
+    area_nombre = serializers.CharField(source='area.nombre', read_only=True, default=None)
+
+    class Meta:
+        """Meta"""
+        model = Colaborador
+        fields = '__all__'
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer"""
     colaborador = serializers.SerializerMethodField()
@@ -10,16 +20,15 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         """Meta"""
         model = User
-        fields = ['username', 'email', 'first_name',
-                  'last_name', 'colaborador']
+        fields = ['id', 'username', 'email', 'first_name',
+                  'last_name', 'is_superuser', 'colaborador']
 
     def get_colaborador(self, obj):
         try:
-            colaborador = Colaborador.objects.get(user=obj)
-            # Serializar los datos de Colaborador
-            return ColaboradorSerializer(colaborador).data
+            colaborador = Colaborador.objects.select_related('area').get(user=obj)
+            return ColaboradorSerializer(colaborador, context=self.context).data
         except Colaborador.DoesNotExist:
-            return None  # Si el usuario no tiene colaborador, devolver None
+            return None
 
 
 class Select2Serializer(serializers.ModelSerializer):
@@ -40,14 +49,6 @@ class Select2Serializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(foto_url)
             return foto_url
         return None
-
-
-class ColaboradorSerializer(serializers.ModelSerializer):
-    """Serializer"""
-    class Meta:
-        """Meta"""
-        model = Colaborador
-        fields = '__all__'
 
 
 class AreaSerializer(serializers.ModelSerializer):
