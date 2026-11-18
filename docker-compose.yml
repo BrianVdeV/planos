@@ -1,14 +1,14 @@
 services:
   db:
-    image: mysql:8.0
+    image: mariadb:11.4
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-planosperu}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-eunacino}
+      MARIADB_DATABASE: ${DB_NAME:-planosperu}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:-eunacino}
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
 
   redis:
     image: redis:7-alpine
@@ -53,4 +53,4 @@ services:
       - backend
 
 volumes:
-  mysql_data:
+  db_data:
